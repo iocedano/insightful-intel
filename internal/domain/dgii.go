@@ -2,12 +2,12 @@ package domain
 
 import (
 	"bytes"
+	"fmt"
 	"insightful-intel/internal/stuff"
 	"io"
 	"net/url"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/net/html"
 )
 
@@ -43,7 +43,6 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 	defer response.Body.Close()
 
 	data := make(map[string]string)
-	// Read the response body
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
@@ -94,7 +93,7 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		// return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	doc, _ = html.Parse(bytes.NewReader(body))
@@ -121,7 +120,6 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 				}
 			}
 
-			spew.Dump(cells)
 			result = append(result, Register{
 				RNCRNC:                cells[0],
 				RazonSocial:           cells[1],
@@ -134,8 +132,6 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 			})
 		}
 	}
-
-	spew.Dump(result)
 
 	return result, nil
 }
