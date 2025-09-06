@@ -51,7 +51,7 @@ type Entity struct {
 	Expedicion        string       `json:"expedicion"`
 	Vencimiento       string       `json:"vencimiento"`
 	EnTramite         bool         `json:"enTramite"`
-	Titular           *string      `json:"titular"`
+	Titular           string       `json:"titular"`
 	Gestor            string       `json:"gestor"`
 	Domicilio         string       `json:"domicilio"`
 	Status            string       `json:"status"`

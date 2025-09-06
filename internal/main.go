@@ -12,12 +12,15 @@ func main() {
 
 	onapi := domain.NewOnapiDomain()
 	dgii := domain.NewDgiiDomain()
+	pgr := domain.NewPgrDomain()
 
 	resp, err := onapi.SearchComercialName("NOVASCO")
 	if err != nil {
 		fmt.Println(err)
 	}
-	spew.Dump(resp)
+
+	var holder string
+	var targer string
 
 	if len(resp) > 0 {
 		details, err := onapi.GetDetails(resp[0].NumeroExpediente, resp[0].SerieExpediente)
@@ -25,6 +28,9 @@ func main() {
 			fmt.Println(err)
 		}
 		spew.Dump(details)
+		holder = details.Titular
+		targer = details.Texto
+
 	}
 
 	dgiiResp, err := dgii.GetRegister("NOVASCO")
@@ -32,4 +38,17 @@ func main() {
 		fmt.Println(err)
 	}
 	spew.Dump(dgiiResp)
+
+	pgrHolderNews, err := pgr.Search(holder)
+	if err != nil {
+		fmt.Println(err)
+	}
+	spew.Dump(pgrHolderNews)
+
+	pgrTargerNews, err := pgr.Search(targer)
+	if err != nil {
+		fmt.Println(err)
+	}
+	spew.Dump(pgrTargerNews)
+
 }
