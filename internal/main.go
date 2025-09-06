@@ -13,19 +13,21 @@ func main() {
 	onapi := domain.NewOnapiDomain()
 	dgii := domain.NewDgiiDomain()
 
-	resp, err := onapi.SearchComercialName("DM B&V")
+	resp, err := onapi.SearchComercialName("NOVASCO")
 	if err != nil {
 		fmt.Println(err)
 	}
 	spew.Dump(resp)
 
-	details, err := onapi.GetDetails(resp.Data[0].Id)
-	if err != nil {
-		fmt.Println(err)
+	if len(resp) > 0 {
+		details, err := onapi.GetDetails(resp[0].NumeroExpediente, resp[0].SerieExpediente)
+		if err != nil {
+			fmt.Println(err)
+		}
+		spew.Dump(details)
 	}
-	spew.Dump(details)
 
-	dgiiResp, err := dgii.GetRegister("DM")
+	dgiiResp, err := dgii.GetRegister("NOVASCO")
 	if err != nil {
 		fmt.Println(err)
 	}
