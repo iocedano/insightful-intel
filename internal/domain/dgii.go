@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"insightful-intel/internal/stuff"
 	"io"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -86,10 +85,6 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 	for key, value := range data {
 		formData.Set(key, value)
 	}
-
-	r := *http.Request()
-
-	URL := 
 
 	resp, err := dgi.Stuff.Client.Post(dgi.BaseParh, formData.Encode(), map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
