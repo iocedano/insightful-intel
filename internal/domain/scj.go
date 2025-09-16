@@ -8,7 +8,10 @@ import (
 	"insightful-intel/internal/stuff"
 	"io"
 	"net/url"
+	"strings"
 )
+
+var _ GenericConnector[ScjCase] = &Scj{}
 
 type Scj struct {
 	Stuff    stuff.Stuff
@@ -84,4 +87,56 @@ func (p *Scj) Search(query string) ([]ScjCase, error) {
 	}
 
 	return result.Data, nil
+}
+
+// Implement GenericConnector[ScjCase] for Onapi
+func (p *Scj) ProcessData(data ScjCase) (ScjCase, error) {
+	// Process the entity data (e.g., clean, validate, enrich)
+	if err := p.ValidateData(data); err != nil {
+		return ScjCase{}, err
+	}
+	return p.TransformData(data), nil
+}
+
+func (p *Scj) ValidateData(data ScjCase) error {
+	// Validate the entity data
+	if data.IDExpediente == 0 {
+		return fmt.Errorf("id is required")
+	}
+
+	return nil
+}
+
+func (p *Scj) TransformData(data ScjCase) ScjCase {
+	transformed := data
+	transformed.IDExpediente = data.IDExpediente
+	transformed.Involucrados = strings.TrimSpace(data.Involucrados)
+	transformed.URLBlob = strings.TrimSpace(data.URLBlob)
+	transformed.DescMateria = strings.TrimSpace(data.DescMateria)
+
+	return transformed
+}
+
+func (p *Scj) GetDataByCategory(data ScjCase, category DataCategory) []string {
+	result := []string{}
+
+	switch category {
+	case DataCategoryPersonName:
+		result = append(result, data.Involucrados)
+	}
+
+	return result
+}
+
+func (p *Scj) GetListOfSearchableCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryPersonName,
+		DataCategoryCompanyName,
+	}
+}
+
+func (p *Scj) GetListOfRetrievedCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryPersonName,
+	}
 }

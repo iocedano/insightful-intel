@@ -11,14 +11,76 @@ import (
 	"golang.org/x/net/html"
 )
 
+var _ GenericConnector[Register] = &Dgii{}
+
 type Dgii struct {
 	Stuff    stuff.Stuff
 	BaseParh string
 	PathMap  stuff.PathMap
 }
 
+// Implement GenericConnector[Register] for Dgii
+func (dgi *Dgii) ProcessData(data Register) (Register, error) {
+	// Process the register data (e.g., clean, validate, enrich)
+	if err := dgi.ValidateData(data); err != nil {
+		return Register{}, err
+	}
+	return dgi.TransformData(data), nil
+}
+
+func (dgi *Dgii) ValidateData(data Register) error {
+	// Validate the register data
+	if data.RNC == "" {
+		return fmt.Errorf("RNCRNC is required")
+	}
+	if data.RazonSocial == "" {
+		return fmt.Errorf("RazonSocial is required")
+	}
+	return nil
+}
+
+func (dgi *Dgii) TransformData(data Register) Register {
+	// Transform the register data (e.g., clean strings, format)
+	return Register{
+		RNC:                   strings.TrimSpace(data.RNC),
+		RazonSocial:           strings.TrimSpace(data.RazonSocial),
+		NombreComercial:       strings.TrimSpace(data.NombreComercial),
+		Categoria:             strings.TrimSpace(data.Categoria),
+		RegimenPagos:          strings.TrimSpace(data.RegimenPagos),
+		FacturadorElectronico: strings.TrimSpace(data.FacturadorElectronico),
+		LicenciaComercial:     strings.TrimSpace(data.LicenciaComercial),
+		Estado:                strings.TrimSpace(data.Estado),
+	}
+}
+
+func (dgi *Dgii) GetDataByCategory(data Register, category DataCategory) []string {
+	result := []string{}
+
+	switch category {
+	case DataCategoryCompanyName:
+		result = append(result, data.NombreComercial, data.RazonSocial)
+	case DataCategoryContributorID:
+		result = append(result, data.RNC)
+	}
+
+	return result
+}
+
+func (dgi *Dgii) GetListOfSearchableCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryCompanyName,
+	}
+}
+
+func (dgi *Dgii) GetListOfRetrievedCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryCompanyName,
+		DataCategoryContributorID,
+	}
+}
+
 type Register struct {
-	RNCRNC                string
+	RNC                   string
 	RazonSocial           string
 	NombreComercial       string
 	Categoria             string
@@ -39,7 +101,9 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 	response, err := dgi.Stuff.Client.Get(dgi.BaseParh, nil, map[string]string{
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
 	})
-
+	if err != nil {
+		return nil, fmt.Errorf("failed to make initial request: %w", err)
+	}
 	defer response.Body.Close()
 
 	data := make(map[string]string)
@@ -90,6 +154,10 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 		"Content-Type": "application/x-www-form-urlencoded",
 		"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to make post request: %w", err)
+	}
+	defer resp.Body.Close()
 
 	body, err = io.ReadAll(resp.Body)
 	if err != nil {
@@ -121,7 +189,7 @@ func (dgi *Dgii) GetRegister(query string) ([]Register, error) {
 			}
 
 			result = append(result, Register{
-				RNCRNC:                cells[0],
+				RNC:                   cells[0],
 				RazonSocial:           cells[1],
 				NombreComercial:       cells[2],
 				Categoria:             cells[3],

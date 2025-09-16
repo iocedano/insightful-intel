@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"insightful-intel/internal/stuff"
 	"io"
+	"strings"
 )
+
+var _ GenericConnector[Entity] = &Onapi{}
 
 type Onapi struct {
 	Stuff    stuff.Stuff
@@ -27,6 +30,64 @@ func NewOnapiDomain() Onapi {
 		BaseParh: "https://www.onapi.gob.do/busqapi/signos/",
 		Stuff:    *stuff.NewStuff(),
 		PathMap:  pm,
+	}
+}
+
+// Implement GenericConnector[Entity] for Onapi
+func (o *Onapi) ProcessData(data Entity) (Entity, error) {
+	// Process the entity data (e.g., clean, validate, enrich)
+	if err := o.ValidateData(data); err != nil {
+		return Entity{}, err
+	}
+	return o.TransformData(data), nil
+}
+
+func (o *Onapi) ValidateData(data Entity) error {
+	// Validate the entity data
+	if data.ID == 0 {
+		return fmt.Errorf("id is required")
+	}
+	if data.Texto == "" {
+		return fmt.Errorf("texto is required")
+	}
+	return nil
+}
+
+func (o *Onapi) TransformData(data Entity) Entity {
+	transformed := data
+	transformed.Texto = strings.TrimSpace(data.Texto)
+	transformed.Titular = strings.TrimSpace(data.Titular)
+	transformed.Gestor = strings.TrimSpace(data.Gestor)
+	transformed.Domicilio = strings.TrimSpace(data.Domicilio)
+	return transformed
+}
+
+func (o *Onapi) GetDataByCategory(data Entity, category DataCategory) []string {
+	result := []string{}
+
+	switch category {
+	case DataCategoryCompanyName:
+		result = append(result, data.Texto)
+	case DataCategoryPersonName:
+		result = append(result, data.Titular, data.Gestor)
+	case DataCategoryAddress:
+		result = append(result, data.Domicilio)
+	}
+
+	return result
+}
+
+func (o *Onapi) GetListOfSearchableCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryCompanyName,
+	}
+}
+
+func (o *Onapi) GetListOfRetrievedCategory() []DataCategory {
+	return []DataCategory{
+		DataCategoryCompanyName,
+		DataCategoryPersonName,
+		DataCategoryAddress,
 	}
 }
 
