@@ -19,6 +19,10 @@ type Dgii struct {
 	PathMap  stuff.PathMap
 }
 
+func (*Dgii) GetName() string {
+	return "DGII"
+}
+
 // Implement GenericConnector[Register] for Dgii
 func (dgi *Dgii) ProcessData(data Register) (Register, error) {
 	// Process the register data (e.g., clean, validate, enrich)
@@ -80,14 +84,14 @@ func (dgi *Dgii) GetListOfRetrievedCategory() []DataCategory {
 }
 
 type Register struct {
-	RNC                   string
-	RazonSocial           string
-	NombreComercial       string
-	Categoria             string
-	RegimenPagos          string
-	FacturadorElectronico string
-	LicenciaComercial     string
-	Estado                string
+	RNC                   string `json:"rnc"`
+	RazonSocial           string `json:"razonSocial"`
+	NombreComercial       string `json:"nombreComercial"`
+	Categoria             string `json:"categoria"`
+	RegimenPagos          string `json:"regimenPagos"`
+	FacturadorElectronico string `json:"facturadorElectronico"`
+	LicenciaComercial     string `json:"licenciaComercial"`
+	Estado                string `json:"estado"`
 }
 
 func NewDgiiDomain() Dgii {

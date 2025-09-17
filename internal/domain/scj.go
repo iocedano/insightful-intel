@@ -89,6 +89,10 @@ func (p *Scj) Search(query string) ([]ScjCase, error) {
 	return result.Data, nil
 }
 
+func (dgi *Scj) GetName() string {
+	return "SCJ"
+}
+
 // Implement GenericConnector[ScjCase] for Onapi
 func (p *Scj) ProcessData(data ScjCase) (ScjCase, error) {
 	// Process the entity data (e.g., clean, validate, enrich)

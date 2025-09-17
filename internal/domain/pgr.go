@@ -25,8 +25,12 @@ func NewPgrDomain() Pgr {
 }
 
 type PGRNews struct {
-	URL   string
-	Title string
+	URL   string `json:"url"`
+	Title string `json:"url"`
+}
+
+func (*Pgr) GetName() string {
+	return "PGR"
 }
 
 // doc: https://www.zenrows.com/blog/web-scraping-golang#install-required-libraries

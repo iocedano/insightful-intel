@@ -16,6 +16,10 @@ type Onapi struct {
 	PathMap  stuff.PathMap
 }
 
+func (*Onapi) GetName() string {
+	return "ONAPI"
+}
+
 // onapi endpoint
 func NewOnapiDomain() Onapi {
 	pm := stuff.PathMap{
@@ -44,11 +48,11 @@ func (o *Onapi) ProcessData(data Entity) (Entity, error) {
 
 func (o *Onapi) ValidateData(data Entity) error {
 	// Validate the entity data
-	if data.ID == 0 {
-		return fmt.Errorf("id is required")
+	if data.NumeroExpediente == 0 {
+		return fmt.Errorf("NumeroExpediente is required")
 	}
-	if data.Texto == "" {
-		return fmt.Errorf("texto is required")
+	if data.SerieExpediente == 0 {
+		return fmt.Errorf("SerieExpediente is required")
 	}
 	return nil
 }
@@ -162,6 +166,16 @@ func (o *Onapi) SearchComercialName(query string) ([]Entity, error) {
 	var onapiResponse []Entity
 	if err := json.Unmarshal(body, &onapiResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+	}
+
+	for i, onapiEntity := range onapiResponse {
+		if o.ValidateData(onapiEntity) == nil {
+			details, err := o.GetDetails(onapiEntity.NumeroExpediente, onapiEntity.SerieExpediente)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+			}
+			onapiResponse[i] = *details
+		}
 	}
 
 	return onapiResponse, nil

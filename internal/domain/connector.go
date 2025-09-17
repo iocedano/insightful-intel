@@ -17,6 +17,7 @@ type GenericConnector[T any] interface {
 	GetDataByCategory(data T, category DataCategory) []string
 	GetListOfSearchableCategory() []DataCategory
 	GetListOfRetrievedCategory() []DataCategory
+	GetName() string
 }
 
 // Extended interface that includes generic methods
@@ -40,4 +41,19 @@ func ProcessBatchData[T any](connector GenericConnector[T], data []T) ([]T, erro
 		results = append(results, processed)
 	}
 	return results, nil
+}
+
+func GetCategoryByKeywords[T any](connector GenericConnector[T], data []T) map[DataCategory][]string {
+	result := map[DataCategory][]string{}
+
+	for _, d := range data {
+		for _, rcv := range connector.GetListOfRetrievedCategory() {
+			if result[rcv] == nil {
+				result[rcv] = []string{}
+			}
+			result[rcv] = append(result[rcv], connector.GetDataByCategory(d, rcv)...)
+		}
+	}
+
+	return result
 }

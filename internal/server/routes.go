@@ -2,8 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"insightful-intel/internal/domain"
 	"log"
 	"net/http"
+	"slices"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -37,9 +41,103 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+type ConnectorPipeline struct {
+	Success             bool
+	Error               error
+	Name                string
+	SearchParameter     string
+	keywordsPerCategory map[domain.DataCategory][]string
+	Output              any
+}
+
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
-	resp := map[string]string{"message": "Hello World"}
-	jsonResp, err := json.Marshal(resp)
+	pipeline := []ConnectorPipeline{}
+
+	onapi := domain.NewOnapiDomain()
+	scj := domain.NewScjDomain()
+	scjSearchableCategory := scj.GetListOfSearchableCategory()
+	dgii := domain.NewDgiiDomain()
+	dgiiSearchableCategory := scj.GetListOfSearchableCategory()
+	// pgr := domain.NewPgrDomain()
+	// pgrSearchableCategory := scj.GetListOfSearchableCategory()
+
+	onapiResp, err := onapi.SearchComercialName("Novasco")
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+	startPoint := ConnectorPipeline{
+		Success:             true,
+		Error:               err,
+		Name:                onapi.GetName(),
+		SearchParameter:     "Novasco",
+		Output:              onapiResp,
+		keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Onapi{}, onapiResp),
+	}
+
+	pipeline = append(pipeline, startPoint)
+
+	nextStep := 0
+
+	for nextStep <= len(pipeline) {
+		collector := pipeline[nextStep]
+
+		// Add condition to end the cycle
+
+		for category, keywords := range collector.keywordsPerCategory {
+			if slices.Contains(scjSearchableCategory, category) {
+				for _, keyword := range keywords {
+
+					scjResp, err := scj.Search(keyword)
+					if err != nil {
+						http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+						continue
+					}
+
+					pipeline = append(pipeline, ConnectorPipeline{
+						Success:             err != nil,
+						Error:               err,
+						Name:                scj.GetName(),
+						SearchParameter:     keyword,
+						Output:              scjResp,
+						keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Scj{}, scjResp),
+					})
+
+					spew.Dump(scj.GetName(), keyword, scjResp)
+
+				}
+			}
+
+			if slices.Contains(dgiiSearchableCategory, category) {
+				for _, keyword := range keywords {
+
+					dgiiResp, err := dgii.GetRegister(keyword)
+					if err != nil {
+						http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+						continue
+					}
+
+					pipeline = append(pipeline, ConnectorPipeline{
+						Success:             err != nil,
+						Error:               err,
+						Name:                dgii.GetName(),
+						SearchParameter:     keyword,
+						Output:              dgiiResp,
+						keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Dgii{}, dgiiResp),
+					})
+					spew.Dump(dgii.GetName(), keyword, dgiiResp)
+
+				}
+			}
+
+		}
+
+		nextStep++
+	}
+
+	spew.Dump(pipeline)
+
+	jsonResp, err := json.Marshal(pipeline)
 	if err != nil {
 		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
 		return
