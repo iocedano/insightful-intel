@@ -16,8 +16,8 @@ type Onapi struct {
 	PathMap  stuff.PathMap
 }
 
-func (*Onapi) GetName() string {
-	return "ONAPI"
+func (*Onapi) GetDomainType() DomainType {
+	return DomainTypeONAPI
 }
 
 // onapi endpoint

@@ -89,8 +89,8 @@ func (p *Scj) Search(query string) ([]ScjCase, error) {
 	return result.Data, nil
 }
 
-func (dgi *Scj) GetName() string {
-	return "SCJ"
+func (dgi *Scj) GetDomainType() DomainType {
+	return DomainTypeSCJ
 }
 
 // Implement GenericConnector[ScjCase] for Onapi

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"sync"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -15,7 +16,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	// Register routes
 	mux.HandleFunc("/", s.HelloWorldHandler)
-
+	mux.HandleFunc("/search", s.searchHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 
 	// Wrap the mux with CORS middleware
@@ -50,92 +51,150 @@ type ConnectorPipeline struct {
 	Output              any
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+func Step[T any](
+	domainConnector domain.GenericConnector[T],
+	searchableCategory []domain.DataCategory,
+	category domain.DataCategory,
+	keywords []string,
+	seachedKeywordsPerDomain map[domain.DomainType][]string,
+) []ConnectorPipeline {
 	pipeline := []ConnectorPipeline{}
 
-	onapi := domain.NewOnapiDomain()
+	// Check if the given category is searchable by the provided domain connector
+	searchableCategories := domainConnector.GetListOfSearchableCategory()
+	if !slices.Contains(searchableCategories, category) {
+		return pipeline
+	}
+
+	domainType := domainConnector.GetDomainType()
+	if seachedKeywordsPerDomain[domainType] == nil {
+		seachedKeywordsPerDomain[domainType] = []string{}
+	}
+
+	for _, keyword := range keywords {
+		if slices.Contains(seachedKeywordsPerDomain[domainType], keyword) || keyword == "" {
+			continue
+		}
+
+		result, err := domain.SearchDomain(domainType, domain.DomainSearchParams{Query: keyword})
+		if err != nil {
+			continue
+		}
+
+		pipeline = append(pipeline, ConnectorPipeline{
+			Success:             result.Success,
+			Error:               result.Error,
+			Name:                string(result.DomainType),
+			SearchParameter:     result.SearchParameter,
+			Output:              result.Output,
+			keywordsPerCategory: result.KeywordsPerCategory,
+		})
+
+		seachedKeywordsPerDomain[domainType] = append(seachedKeywordsPerDomain[domainType], keyword)
+	}
+
+	return pipeline
+}
+
+func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+
+	query := r.URL.Query().Get("q")
+	searchParams := domain.DomainSearchParams{
+		Query: query,
+	}
+
+	// // Convert to the existing ConnectorPipeline format for compatibility
+	pipeline := []ConnectorPipeline{}
+
+	// Example 2: Search multiple domains at once
+	domainTypes := []domain.DomainType{
+		domain.DomainTypeONAPI,
+		domain.DomainTypeSCJ,
+		domain.DomainTypeDGII,
+	}
+
+	multiResults := domain.SearchMultipleDomains(domainTypes, searchParams)
+	seachedKeywordsPerDomain := map[domain.DomainType][]string{}
+
+	// Add results to pipeline
+	for _, result := range multiResults {
+		pipeline = append(pipeline, ConnectorPipeline{
+			Success:             result.Success,
+			Error:               result.Error,
+			Name:                string(result.DomainType),
+			SearchParameter:     result.SearchParameter,
+			Output:              result.Output,
+			keywordsPerCategory: result.KeywordsPerCategory,
+		})
+
+		seachedKeywordsPerDomain[result.DomainType] = append(seachedKeywordsPerDomain[result.DomainType], result.SearchParameter)
+	}
+
+	// Example 3: Dynamic pipeline based on keywords (keeping the original logic)
 	scj := domain.NewScjDomain()
 	scjSearchableCategory := scj.GetListOfSearchableCategory()
 	dgii := domain.NewDgiiDomain()
-	dgiiSearchableCategory := scj.GetListOfSearchableCategory()
-	// pgr := domain.NewPgrDomain()
-	// pgrSearchableCategory := scj.GetListOfSearchableCategory()
+	dgiiSearchableCategory := dgii.GetListOfSearchableCategory()
 
-	onapiResp, err := onapi.SearchComercialName("Novasco")
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-	startPoint := ConnectorPipeline{
-		Success:             true,
-		Error:               err,
-		Name:                onapi.GetName(),
-		SearchParameter:     "Novasco",
-		Output:              onapiResp,
-		keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Onapi{}, onapiResp),
-	}
-
-	pipeline = append(pipeline, startPoint)
-
+	// Use goroutines and channels to parallelize Step calls for SCJ and DGII
 	nextStep := 0
-
-	for nextStep <= len(pipeline) {
+	type stepResult struct {
+		results []ConnectorPipeline
+	}
+	for nextStep < len(pipeline) {
 		collector := pipeline[nextStep]
 
-		// Add condition to end the cycle
-
-		for category, keywords := range collector.keywordsPerCategory {
-			if slices.Contains(scjSearchableCategory, category) {
-				for _, keyword := range keywords {
-
-					scjResp, err := scj.Search(keyword)
-					if err != nil {
-						http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-						continue
-					}
-
-					pipeline = append(pipeline, ConnectorPipeline{
-						Success:             err != nil,
-						Error:               err,
-						Name:                scj.GetName(),
-						SearchParameter:     keyword,
-						Output:              scjResp,
-						keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Scj{}, scjResp),
-					})
-
-					spew.Dump(scj.GetName(), keyword, scjResp)
-
-				}
-			}
-
-			if slices.Contains(dgiiSearchableCategory, category) {
-				for _, keyword := range keywords {
-
-					dgiiResp, err := dgii.GetRegister(keyword)
-					if err != nil {
-						http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-						continue
-					}
-
-					pipeline = append(pipeline, ConnectorPipeline{
-						Success:             err != nil,
-						Error:               err,
-						Name:                dgii.GetName(),
-						SearchParameter:     keyword,
-						Output:              dgiiResp,
-						keywordsPerCategory: domain.GetCategoryByKeywords(&domain.Dgii{}, dgiiResp),
-					})
-					spew.Dump(dgii.GetName(), keyword, dgiiResp)
-
-				}
-			}
-
+		type stepCall struct {
+			connector          any
+			searchableCategory []domain.DataCategory
+			category           domain.DataCategory
+			keywords           []string
 		}
+
+		var calls []stepCall
+		for category, keywords := range collector.keywordsPerCategory {
+			calls = append(calls, stepCall{&scj, scjSearchableCategory, category, keywords})
+			calls = append(calls, stepCall{&dgii, dgiiSearchableCategory, category, keywords})
+		}
+
+		resultsCh := make(chan []ConnectorPipeline, len(calls))
+		doneCh := make(chan struct{})
+		var wg sync.WaitGroup
+
+		for _, call := range calls {
+			wg.Add(1)
+			go func(call stepCall) {
+				defer wg.Done()
+				switch c := call.connector.(type) {
+				case *domain.Scj:
+					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+				case *domain.Dgii:
+					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+				default:
+					resultsCh <- nil
+				}
+			}(call)
+		}
+
+		// Wait for all goroutines to finish, then close the results channel
+		go func() {
+			wg.Wait()
+			close(resultsCh)
+			close(doneCh)
+		}()
+
+		// Collect all results from the channel
+		for p := range resultsCh {
+			if len(p) > 0 {
+				pipeline = append(pipeline, p...)
+			}
+		}
+		<-doneCh // Ensure all goroutines are finished
 
 		nextStep++
 	}
 
-	spew.Dump(pipeline)
+	spew.Dump("-----Finish----")
 
 	jsonResp, err := json.Marshal(pipeline)
 	if err != nil {
@@ -146,6 +205,96 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(jsonResp); err != nil {
 		log.Printf("Failed to write response: %v", err)
 	}
+}
+
+// searchHandler demonstrates how to use the new domain search function
+func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
+	// Get query parameters
+	query := r.URL.Query().Get("q")
+	domainType := r.URL.Query().Get("domain")
+
+	if query == "" {
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
+	}
+
+	searchParams := domain.DomainSearchParams{
+		Query: query,
+	}
+
+	var result *domain.DomainSearchResult
+	var err error
+
+	// If specific domain is requested, search that domain
+	if domainType != "" {
+		switch domainType {
+		case "onapi":
+			result, err = domain.SearchDomain(domain.DomainTypeONAPI, searchParams)
+		case "scj":
+			result, err = domain.SearchDomain(domain.DomainTypeSCJ, searchParams)
+		case "dgii":
+			result, err = domain.SearchDomain(domain.DomainTypeDGII, searchParams)
+		default:
+			http.Error(w, "Invalid domain type. Use: onapi, scj, or dgii", http.StatusBadRequest)
+			return
+		}
+
+		if err != nil {
+			http.Error(w, "Search failed", http.StatusInternalServerError)
+			return
+		}
+
+		// Convert to ConnectorPipeline format
+		pipeline := ConnectorPipeline{
+			Success:             result.Success,
+			Error:               result.Error,
+			Name:                string(result.DomainType),
+			SearchParameter:     result.SearchParameter,
+			Output:              result.Output,
+			keywordsPerCategory: result.KeywordsPerCategory,
+		}
+
+		jsonResp, err := json.Marshal(pipeline)
+		if err != nil {
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonResp)
+		return
+	}
+
+	// If no specific domain, search all domains
+	domainTypes := []domain.DomainType{
+		domain.DomainTypeONAPI,
+		domain.DomainTypeSCJ,
+		domain.DomainTypeDGII,
+	}
+
+	results := domain.SearchMultipleDomains(domainTypes, searchParams)
+
+	// Convert to ConnectorPipeline format
+	pipeline := make([]ConnectorPipeline, 0, len(results))
+	for _, result := range results {
+		pipeline = append(pipeline, ConnectorPipeline{
+			Success:             result.Success,
+			Error:               result.Error,
+			Name:                string(result.DomainType),
+			SearchParameter:     result.SearchParameter,
+			Output:              result.Output,
+			keywordsPerCategory: result.KeywordsPerCategory,
+		})
+	}
+
+	jsonResp, err := json.Marshal(pipeline)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
 }
 
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {

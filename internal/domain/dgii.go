@@ -19,8 +19,8 @@ type Dgii struct {
 	PathMap  stuff.PathMap
 }
 
-func (*Dgii) GetName() string {
-	return "DGII"
+func (*Dgii) GetDomainType() DomainType {
+	return DomainTypeDGII
 }
 
 // Implement GenericConnector[Register] for Dgii
@@ -62,6 +62,14 @@ func (dgi *Dgii) GetDataByCategory(data Register, category DataCategory) []strin
 
 	switch category {
 	case DataCategoryCompanyName:
+		if data.NombreComercial != "" {
+			result = append(result, data.NombreComercial)
+		}
+
+		if data.RazonSocial != "" {
+			result = append(result, data.RazonSocial)
+		}
+
 		result = append(result, data.NombreComercial, data.RazonSocial)
 	case DataCategoryContributorID:
 		result = append(result, data.RNC)

@@ -29,8 +29,8 @@ type PGRNews struct {
 	Title string `json:"url"`
 }
 
-func (*Pgr) GetName() string {
-	return "PGR"
+func (*Pgr) GetDomainType() DomainType {
+	return DomainTypePGR
 }
 
 // doc: https://www.zenrows.com/blog/web-scraping-golang#install-required-libraries
