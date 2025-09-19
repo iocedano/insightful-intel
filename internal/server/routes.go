@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -17,6 +19,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// Register routes
 	mux.HandleFunc("/", s.HelloWorldHandler)
 	mux.HandleFunc("/search", s.searchHandler)
+	mux.HandleFunc("/dynamic", s.dynamicPipelineHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 
 	// Wrap the mux with CORS middleware
@@ -51,6 +54,7 @@ type ConnectorPipeline struct {
 	Output              any
 }
 
+// Step executes a single step in the pipeline for a specific domain connector
 func Step[T any](
 	domainConnector domain.GenericConnector[T],
 	searchableCategory []domain.DataCategory,
@@ -96,6 +100,26 @@ func Step[T any](
 	return pipeline
 }
 
+// convertDynamicPipelineToConnectorPipeline converts DynamicPipelineResult to ConnectorPipeline format
+func convertDynamicPipelineToConnectorPipeline(dynamicResult *domain.DynamicPipelineResult) []ConnectorPipeline {
+	pipeline := make([]ConnectorPipeline, 0, len(dynamicResult.Steps))
+
+	for _, step := range dynamicResult.Steps {
+		pipeline = append(pipeline, ConnectorPipeline{
+			Success:             step.Success,
+			Error:               step.Error,
+			Name:                string(step.DomainType),
+			SearchParameter:     step.SearchParameter,
+			Output:              step.Output,
+			keywordsPerCategory: step.KeywordsPerCategory,
+		})
+	}
+
+	return pipeline
+}
+
+const Seconds = 2
+
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query().Get("q")
@@ -111,6 +135,7 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 		domain.DomainTypeONAPI,
 		domain.DomainTypeSCJ,
 		domain.DomainTypeDGII,
+		domain.DomainTypePGR,
 	}
 
 	multiResults := domain.SearchMultipleDomains(domainTypes, searchParams)
@@ -138,9 +163,6 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Use goroutines and channels to parallelize Step calls for SCJ and DGII
 	nextStep := 0
-	type stepResult struct {
-		results []ConnectorPipeline
-	}
 	for nextStep < len(pipeline) {
 		collector := pipeline[nextStep]
 
@@ -168,8 +190,10 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 				switch c := call.connector.(type) {
 				case *domain.Scj:
 					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+					time.Sleep(time.Duration(Seconds) * time.Second)
 				case *domain.Dgii:
 					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+					time.Sleep(time.Duration(Seconds) * time.Second)
 				default:
 					resultsCh <- nil
 				}
@@ -234,6 +258,8 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			result, err = domain.SearchDomain(domain.DomainTypeSCJ, searchParams)
 		case "dgii":
 			result, err = domain.SearchDomain(domain.DomainTypeDGII, searchParams)
+		case "pgr":
+			result, err = domain.SearchDomain(domain.DomainTypePGR, searchParams)
 		default:
 			http.Error(w, "Invalid domain type. Use: onapi, scj, or dgii", http.StatusBadRequest)
 			return
@@ -288,6 +314,88 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResp, err := json.Marshal(pipeline)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+// dynamicPipelineHandler demonstrates the new dynamic pipeline functionality
+func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		query = "Novasco" // Default query
+	}
+
+	// Get configuration parameters
+	maxDepth := 53
+	if depth := r.URL.Query().Get("depth"); depth != "" {
+		if d, err := strconv.Atoi(depth); err == nil && d > 0 && d <= 10 {
+			maxDepth = d
+		}
+	}
+
+	skipDuplicates := true
+	if skip := r.URL.Query().Get("skip_duplicates"); skip == "false" {
+		skipDuplicates = false
+	}
+
+	// Configure the dynamic pipeline
+	config := domain.DynamicPipelineConfig{
+		MaxDepth:           maxDepth,
+		MaxConcurrentSteps: 10,
+		DelayBetweenSteps:  2,
+		SkipDuplicates:     skipDuplicates,
+	}
+
+	// Available domains
+	availableDomains := []domain.DomainType{
+		domain.DomainTypeONAPI,
+		domain.DomainTypeSCJ,
+		domain.DomainTypeDGII,
+		domain.DomainTypePGR,
+	}
+
+	// Execute the dynamic pipeline
+	dynamicResult, err := domain.ExecuteDynamicPipeline(query, availableDomains, config)
+	if err != nil {
+		http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert to the standard ConnectorPipeline format for compatibility
+	pipeline := convertDynamicPipelineToConnectorPipeline(dynamicResult)
+
+	// Create response with both formats
+	response := struct {
+		DynamicResult *domain.DynamicPipelineResult `json:"dynamic_result"`
+		Pipeline      []ConnectorPipeline           `json:"pipeline"`
+		Summary       struct {
+			TotalSteps      int `json:"total_steps"`
+			SuccessfulSteps int `json:"successful_steps"`
+			FailedSteps     int `json:"failed_steps"`
+			MaxDepthReached int `json:"max_depth_reached"`
+		} `json:"summary"`
+	}{
+		DynamicResult: dynamicResult,
+		Pipeline:      pipeline,
+		Summary: struct {
+			TotalSteps      int `json:"total_steps"`
+			SuccessfulSteps int `json:"successful_steps"`
+			FailedSteps     int `json:"failed_steps"`
+			MaxDepthReached int `json:"max_depth_reached"`
+		}{
+			TotalSteps:      dynamicResult.TotalSteps,
+			SuccessfulSteps: dynamicResult.SuccessfulSteps,
+			FailedSteps:     dynamicResult.FailedSteps,
+			MaxDepthReached: dynamicResult.MaxDepthReached,
+		},
+	}
+
+	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
 		return

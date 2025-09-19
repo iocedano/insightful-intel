@@ -26,7 +26,7 @@ func NewPgrDomain() Pgr {
 
 type PGRNews struct {
 	URL   string `json:"url"`
-	Title string `json:"url"`
+	Title string `json:"title"`
 }
 
 func (*Pgr) GetDomainType() DomainType {

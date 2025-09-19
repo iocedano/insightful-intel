@@ -66,7 +66,7 @@ func main() {
 }
 
 // Example function that shows how to use the domain search in your own code
-func searchCompany(companyName string) ([]domain.DomainSearchResult, error) {
+func searchCompany(companyName string) ([]*domain.DomainSearchResult, error) {
 	searchParams := domain.DomainSearchParams{
 		Query: companyName,
 	}
@@ -76,6 +76,7 @@ func searchCompany(companyName string) ([]domain.DomainSearchResult, error) {
 		domain.DomainTypeONAPI,
 		domain.DomainTypeSCJ,
 		domain.DomainTypeDGII,
+		domain.DomainTypePGR,
 	}
 
 	results := domain.SearchMultipleDomains(domainTypes, searchParams)
