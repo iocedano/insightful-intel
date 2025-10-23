@@ -2,22 +2,22 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"insightful-intel/internal/domain"
+	"insightful-intel/internal/module"
 	"log"
 	"net/http"
 	"slices"
 	"strconv"
-	"sync"
+	"strings"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Register routes
-	mux.HandleFunc("/", s.HelloWorldHandler)
+	// mux.HandleFunc("/", s.HelloWorldHandler)
 	mux.HandleFunc("/search", s.searchHandler)
 	mux.HandleFunc("/dynamic", s.dynamicPipelineHandler)
 	mux.HandleFunc("/health", s.healthHandler)
@@ -50,22 +50,22 @@ type ConnectorPipeline struct {
 	Error               error
 	Name                string
 	SearchParameter     string
-	keywordsPerCategory map[domain.DataCategory][]string
+	keywordsPerCategory map[domain.KeywordCategory][]string
 	Output              any
 }
 
 // Step executes a single step in the pipeline for a specific domain connector
 func Step[T any](
 	domainConnector domain.GenericConnector[T],
-	searchableCategory []domain.DataCategory,
-	category domain.DataCategory,
+	searchableCategory []domain.KeywordCategory,
+	category domain.KeywordCategory,
 	keywords []string,
 	seachedKeywordsPerDomain map[domain.DomainType][]string,
 ) []ConnectorPipeline {
 	pipeline := []ConnectorPipeline{}
 
 	// Check if the given category is searchable by the provided domain connector
-	searchableCategories := domainConnector.GetListOfSearchableCategory()
+	searchableCategories := domainConnector.GetSearchableKeywordCategories()
 	if !slices.Contains(searchableCategories, category) {
 		return pipeline
 	}
@@ -80,7 +80,7 @@ func Step[T any](
 			continue
 		}
 
-		result, err := domain.SearchDomain(domainType, domain.DomainSearchParams{Query: keyword})
+		result, err := module.SearchDomain(domainType, domain.DomainSearchParams{Query: keyword})
 		if err != nil {
 			continue
 		}
@@ -101,7 +101,7 @@ func Step[T any](
 }
 
 // convertDynamicPipelineToConnectorPipeline converts DynamicPipelineResult to ConnectorPipeline format
-func convertDynamicPipelineToConnectorPipeline(dynamicResult *domain.DynamicPipelineResult) []ConnectorPipeline {
+func convertDynamicPipelineToConnectorPipeline(dynamicResult *module.DynamicPipelineResult) []ConnectorPipeline {
 	pipeline := make([]ConnectorPipeline, 0, len(dynamicResult.Steps))
 
 	for _, step := range dynamicResult.Steps {
@@ -120,116 +120,116 @@ func convertDynamicPipelineToConnectorPipeline(dynamicResult *domain.DynamicPipe
 
 const Seconds = 2
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+// func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
-	query := r.URL.Query().Get("q")
-	searchParams := domain.DomainSearchParams{
-		Query: query,
-	}
+// 	query := r.URL.Query().Get("q")
+// 	searchParams := domain.DomainSearchParams{
+// 		Query: query,
+// 	}
 
-	// // Convert to the existing ConnectorPipeline format for compatibility
-	pipeline := []ConnectorPipeline{}
+// 	// // Convert to the existing ConnectorPipeline format for compatibility
+// 	pipeline := []ConnectorPipeline{}
 
-	// Example 2: Search multiple domains at once
-	domainTypes := []domain.DomainType{
-		domain.DomainTypeONAPI,
-		domain.DomainTypeSCJ,
-		domain.DomainTypeDGII,
-		domain.DomainTypePGR,
-	}
+// 	// Example 2: Search multiple domains at once
+// 	domainTypes := []domain.DomainType{
+// 		domain.DomainTypeONAPI,
+// 		domain.DomainTypeSCJ,
+// 		domain.DomainTypeDGII,
+// 		domain.DomainTypePGR,
+// 	}
 
-	multiResults := domain.SearchMultipleDomains(domainTypes, searchParams)
-	seachedKeywordsPerDomain := map[domain.DomainType][]string{}
+// 	multiResults := domain.SearchMultipleDomains(domainTypes, searchParams)
+// 	seachedKeywordsPerDomain := map[domain.DomainType][]string{}
 
-	// Add results to pipeline
-	for _, result := range multiResults {
-		pipeline = append(pipeline, ConnectorPipeline{
-			Success:             result.Success,
-			Error:               result.Error,
-			Name:                string(result.DomainType),
-			SearchParameter:     result.SearchParameter,
-			Output:              result.Output,
-			keywordsPerCategory: result.KeywordsPerCategory,
-		})
+// 	// Add results to pipeline
+// 	for _, result := range multiResults {
+// 		pipeline = append(pipeline, ConnectorPipeline{
+// 			Success:             result.Success,
+// 			Error:               result.Error,
+// 			Name:                string(result.DomainType),
+// 			SearchParameter:     result.SearchParameter,
+// 			Output:              result.Output,
+// 			keywordsPerCategory: result.KeywordsPerCategory,
+// 		})
 
-		seachedKeywordsPerDomain[result.DomainType] = append(seachedKeywordsPerDomain[result.DomainType], result.SearchParameter)
-	}
+// 		seachedKeywordsPerDomain[result.DomainType] = append(seachedKeywordsPerDomain[result.DomainType], result.SearchParameter)
+// 	}
 
-	// Example 3: Dynamic pipeline based on keywords (keeping the original logic)
-	scj := domain.NewScjDomain()
-	scjSearchableCategory := scj.GetListOfSearchableCategory()
-	dgii := domain.NewDgiiDomain()
-	dgiiSearchableCategory := dgii.GetListOfSearchableCategory()
+// 	// Example 3: Dynamic pipeline based on keywords (keeping the original logic)
+// 	scj := domain.NewScjDomain()
+// 	scjSearchableCategory := scj.GetSearchableKeywordCategories()
+// 	dgii := domain.NewDgiiDomain()
+// 	dgiiSearchableCategory := dgii.GetSearchableKeywordCategories()
 
-	// Use goroutines and channels to parallelize Step calls for SCJ and DGII
-	nextStep := 0
-	for nextStep < len(pipeline) {
-		collector := pipeline[nextStep]
+// 	// Use goroutines and channels to parallelize Step calls for SCJ and DGII
+// 	nextStep := 0
+// 	for nextStep < len(pipeline) {
+// 		collector := pipeline[nextStep]
 
-		type stepCall struct {
-			connector          any
-			searchableCategory []domain.DataCategory
-			category           domain.DataCategory
-			keywords           []string
-		}
+// 		type stepCall struct {
+// 			connector          any
+// 			searchableCategory []domain.KeywordCategory
+// 			category           domain.KeywordCategory
+// 			keywords           []string
+// 		}
 
-		var calls []stepCall
-		for category, keywords := range collector.keywordsPerCategory {
-			calls = append(calls, stepCall{&scj, scjSearchableCategory, category, keywords})
-			calls = append(calls, stepCall{&dgii, dgiiSearchableCategory, category, keywords})
-		}
+// 		var calls []stepCall
+// 		for category, keywords := range collector.keywordsPerCategory {
+// 			calls = append(calls, stepCall{&scj, scjSearchableCategory, category, keywords})
+// 			calls = append(calls, stepCall{&dgii, dgiiSearchableCategory, category, keywords})
+// 		}
 
-		resultsCh := make(chan []ConnectorPipeline, len(calls))
-		doneCh := make(chan struct{})
-		var wg sync.WaitGroup
+// 		resultsCh := make(chan []ConnectorPipeline, len(calls))
+// 		doneCh := make(chan struct{})
+// 		var wg sync.WaitGroup
 
-		for _, call := range calls {
-			wg.Add(1)
-			go func(call stepCall) {
-				defer wg.Done()
-				switch c := call.connector.(type) {
-				case *domain.Scj:
-					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
-					time.Sleep(time.Duration(Seconds) * time.Second)
-				case *domain.Dgii:
-					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
-					time.Sleep(time.Duration(Seconds) * time.Second)
-				default:
-					resultsCh <- nil
-				}
-			}(call)
-		}
+// 		for _, call := range calls {
+// 			wg.Add(1)
+// 			go func(call stepCall) {
+// 				defer wg.Done()
+// 				switch c := call.connector.(type) {
+// 				case *domain.Scj:
+// 					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+// 					time.Sleep(time.Duration(Seconds) * time.Second)
+// 				case *domain.Dgii:
+// 					resultsCh <- Step(c, call.searchableCategory, call.category, call.keywords, seachedKeywordsPerDomain)
+// 					time.Sleep(time.Duration(Seconds) * time.Second)
+// 				default:
+// 					resultsCh <- nil
+// 				}
+// 			}(call)
+// 		}
 
-		// Wait for all goroutines to finish, then close the results channel
-		go func() {
-			wg.Wait()
-			close(resultsCh)
-			close(doneCh)
-		}()
+// 		// Wait for all goroutines to finish, then close the results channel
+// 		go func() {
+// 			wg.Wait()
+// 			close(resultsCh)
+// 			close(doneCh)
+// 		}()
 
-		// Collect all results from the channel
-		for p := range resultsCh {
-			if len(p) > 0 {
-				pipeline = append(pipeline, p...)
-			}
-		}
-		<-doneCh // Ensure all goroutines are finished
+// 		// Collect all results from the channel
+// 		for p := range resultsCh {
+// 			if len(p) > 0 {
+// 				pipeline = append(pipeline, p...)
+// 			}
+// 		}
+// 		<-doneCh // Ensure all goroutines are finished
 
-		nextStep++
-	}
+// 		nextStep++
+// 	}
 
-	spew.Dump("-----Finish----")
+// 	spew.Dump("-----Finish----")
 
-	jsonResp, err := json.Marshal(pipeline)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(jsonResp); err != nil {
-		log.Printf("Failed to write response: %v", err)
-	}
-}
+// 	jsonResp, err := json.Marshal(pipeline)
+// 	if err != nil {
+// 		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+// 		return
+// 	}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	if _, err := w.Write(jsonResp); err != nil {
+// 		log.Printf("Failed to write response: %v", err)
+// 	}
+// }
 
 // searchHandler demonstrates how to use the new domain search function
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
@@ -253,13 +253,13 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 	if domainType != "" {
 		switch domainType {
 		case "onapi":
-			result, err = domain.SearchDomain(domain.DomainTypeONAPI, searchParams)
+			result, err = module.SearchDomain(domain.DomainTypeONAPI, searchParams)
 		case "scj":
-			result, err = domain.SearchDomain(domain.DomainTypeSCJ, searchParams)
+			result, err = module.SearchDomain(domain.DomainTypeSCJ, searchParams)
 		case "dgii":
-			result, err = domain.SearchDomain(domain.DomainTypeDGII, searchParams)
+			result, err = module.SearchDomain(domain.DomainTypeDGII, searchParams)
 		case "pgr":
-			result, err = domain.SearchDomain(domain.DomainTypePGR, searchParams)
+			result, err = module.SearchDomain(domain.DomainTypePGR, searchParams)
 		default:
 			http.Error(w, "Invalid domain type. Use: onapi, scj, or dgii", http.StatusBadRequest)
 			return
@@ -298,7 +298,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		domain.DomainTypeDGII,
 	}
 
-	results := domain.SearchMultipleDomains(domainTypes, searchParams)
+	results := module.SearchMultipleDomains(domainTypes, searchParams)
 
 	// Convert to ConnectorPipeline format
 	pipeline := make([]ConnectorPipeline, 0, len(results))
@@ -343,11 +343,19 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		skipDuplicates = false
 	}
 
+	// Check if streaming is requested
+	stream := r.URL.Query().Get("stream") == "true"
+
+	if stream {
+		s.dynamicPipelineStreamHandler(w, r, query, maxDepth, skipDuplicates)
+		return
+	}
+
 	// Configure the dynamic pipeline
-	config := domain.DynamicPipelineConfig{
+	config := module.DynamicPipelineConfig{
 		MaxDepth:           maxDepth,
-		MaxConcurrentSteps: 10,
-		DelayBetweenSteps:  2,
+		MaxConcurrentSteps: 3,
+		DelayBetweenSteps:  5,
 		SkipDuplicates:     skipDuplicates,
 	}
 
@@ -357,10 +365,11 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		domain.DomainTypeSCJ,
 		domain.DomainTypeDGII,
 		domain.DomainTypePGR,
+		domain.DomainTypeGoogleDocking,
 	}
 
 	// Execute the dynamic pipeline
-	dynamicResult, err := domain.ExecuteDynamicPipeline(query, availableDomains, config)
+	dynamicResult, err := module.ExecuteDynamicPipeline(query, availableDomains, config)
 	if err != nil {
 		http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
 		return
@@ -371,7 +380,7 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 
 	// Create response with both formats
 	response := struct {
-		DynamicResult *domain.DynamicPipelineResult `json:"dynamic_result"`
+		DynamicResult *module.DynamicPipelineResult `json:"dynamic_result"`
 		Pipeline      []ConnectorPipeline           `json:"pipeline"`
 		Summary       struct {
 			TotalSteps      int `json:"total_steps"`
@@ -405,6 +414,301 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 	w.Write(jsonResp)
 }
 
+// dynamicPipelineStreamHandler handles streaming pipeline results
+func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Request, query string, maxDepth int, skipDuplicates bool) {
+	// Set headers for streaming
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
+
+	// Create a channel to receive pipeline steps
+	stepChan := make(chan module.DynamicPipelineStep, 100)
+	done := make(chan bool)
+
+	// Configure the dynamic pipeline
+	config := module.DynamicPipelineConfig{
+		MaxDepth:           maxDepth,
+		MaxConcurrentSteps: 10,
+		DelayBetweenSteps:  2,
+		SkipDuplicates:     skipDuplicates,
+	}
+
+	// Available domains
+	availableDomains := []domain.DomainType{
+		domain.DomainTypeONAPI,
+		domain.DomainTypeSCJ,
+		domain.DomainTypeDGII,
+		domain.DomainTypePGR,
+		domain.DomainTypeGoogleDocking,
+	}
+
+	// Start pipeline execution in a goroutine
+	go func() {
+		defer close(stepChan)
+		defer close(done)
+
+		// Execute the dynamic pipeline with step callback
+		dynamicResult, err := s.executeDynamicPipelineWithCallback(query, availableDomains, config, stepChan)
+		if err != nil {
+			// Send error as a step
+			errorStep := module.DynamicPipelineStep{
+				DomainType:      "ERROR",
+				SearchParameter: query,
+				Success:         false,
+				Error:           err,
+				Output:          nil,
+				Depth:           0,
+			}
+			stepChan <- errorStep
+			return
+		}
+
+		// Send final summary
+		summaryStep := module.DynamicPipelineStep{
+			DomainType:      "SUMMARY",
+			SearchParameter: query,
+			Success:         true,
+			Error:           nil,
+			Output: map[string]interface{}{
+				"total_steps":       dynamicResult.TotalSteps,
+				"successful_steps":  dynamicResult.SuccessfulSteps,
+				"failed_steps":      dynamicResult.FailedSteps,
+				"max_depth_reached": dynamicResult.MaxDepthReached,
+			},
+			Depth: dynamicResult.MaxDepthReached,
+		}
+		stepChan <- summaryStep
+	}()
+	// Flush the response to ensure immediate delivery
+	flusher, ok := w.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	}
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	// Stream the steps as they come
+	stepCount := 0
+	for {
+		select {
+		case step, ok := <-stepChan:
+			if !ok {
+				// Channel closed, send completion event
+				s.writeSSEEvent(w, "complete", map[string]interface{}{
+					"message":     "Pipeline execution completed",
+					"total_steps": stepCount,
+				}, flusher)
+				return
+			}
+
+			stepCount++
+
+			// Convert step to ConnectorPipeline format
+			pipelineStep := ConnectorPipeline{
+				Success:             step.Success,
+				Error:               step.Error,
+				Name:                string(step.DomainType),
+				SearchParameter:     step.SearchParameter,
+				Output:              step.Output,
+				keywordsPerCategory: step.KeywordsPerCategory,
+			}
+
+			// Send step as SSE event
+			eventData := map[string]interface{}{
+				"step_number": stepCount,
+				"step":        pipelineStep,
+				"depth":       step.Depth,
+				"category":    string(step.Category),
+				"keywords":    step.Keywords,
+			}
+
+			eventType := "step"
+			switch step.DomainType {
+			case "error":
+				eventType = "error"
+			case "SUMMARY":
+				eventType = "sumary"
+			}
+
+			s.writeSSEEvent(w, eventType, eventData, flusher)
+
+		case <-r.Context().Done():
+			// Client disconnected
+			return
+		}
+	}
+}
+
+// executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
+func (s *Server) executeDynamicPipelineWithCallback(query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+	// Create a custom pipeline executor that streams steps
+	return s.executeStreamingPipeline(query, availableDomains, config, stepChan)
+}
+
+// executeStreamingPipeline executes the pipeline with real-time streaming
+func (s *Server) executeStreamingPipeline(query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+	// Create the initial pipeline steps
+	initialResult, err := module.CreateDynamicPipeline(query, availableDomains, config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get initial steps from the result
+	initialSteps := initialResult.Steps
+
+	totalSteps := 0
+	successfulSteps := 0
+	failedSteps := 0
+	maxDepthReached := 0
+
+	// Track searched keywords per domain to avoid duplicates
+	searchedKeywordsPerDomain := make(map[domain.DomainType]map[string]bool)
+	for _, domainType := range availableDomains {
+		searchedKeywordsPerDomain[domainType] = make(map[string]bool)
+	}
+
+	// Process steps with streaming
+	processedSteps := make([]module.DynamicPipelineStep, 0)
+
+	// Create a queue for steps to process
+	stepQueue := make([]module.DynamicPipelineStep, len(initialSteps))
+	copy(stepQueue, initialSteps)
+
+	for len(stepQueue) > 0 {
+		// Get next step from queue
+		step := stepQueue[0]
+		stepQueue = stepQueue[1:]
+
+		// Send step start event
+		startStep := step
+		startStep.Success = false
+		startStep.Output = nil
+		stepChan <- startStep
+
+		// Execute the step
+		result, err := module.SearchDomain(step.DomainType, domain.DomainSearchParams{Query: step.SearchParameter})
+
+		// Update step with results
+		step.Success = err == nil
+		step.Error = err
+		if result != nil {
+			step.Output = result.Output
+			step.KeywordsPerCategory = result.KeywordsPerCategory
+		}
+
+		// Update counters
+		totalSteps++
+		if step.Success {
+			successfulSteps++
+		} else {
+			failedSteps++
+		}
+
+		if step.Depth > maxDepthReached {
+			maxDepthReached = step.Depth
+		}
+
+		// Send completed step
+		stepChan <- step
+		processedSteps = append(processedSteps, step)
+
+		// Add delay between steps for better streaming experience
+		time.Sleep(time.Duration(config.DelayBetweenSteps) * time.Second)
+
+		// Generate new steps from keywords if not at max depth
+		if step.Depth < config.MaxDepth && step.Success && step.Output != nil {
+			newSteps := s.generateNextSteps(step, availableDomains, searchedKeywordsPerDomain, config)
+			stepQueue = append(stepQueue, newSteps...)
+		}
+	}
+
+	// Create final result
+	dynamicResult := &module.DynamicPipelineResult{
+		Steps:           processedSteps,
+		TotalSteps:      totalSteps,
+		SuccessfulSteps: successfulSteps,
+		FailedSteps:     failedSteps,
+		MaxDepthReached: maxDepthReached,
+		Config:          config,
+	}
+
+	return dynamicResult, nil
+}
+
+// generateNextSteps generates new pipeline steps from a completed step
+func (s *Server) generateNextSteps(completedStep module.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config module.DynamicPipelineConfig) []module.DynamicPipelineStep {
+	var newSteps []module.DynamicPipelineStep
+
+	// Extract keywords from the completed step
+	keywordsPerCategory := completedStep.KeywordsPerCategory
+	if keywordsPerCategory == nil {
+		return newSteps
+	}
+
+	// Generate new steps for each keyword category
+	for category, keywords := range keywordsPerCategory {
+		for _, keyword := range keywords {
+			// Skip if already searched or if keyword is too short
+			if len(keyword) < 3 {
+				continue
+			}
+
+			// Generate steps for each available domain
+			for _, domainType := range availableDomains {
+				// Skip if already searched this keyword for this domain
+				if searchedKeywordsPerDomain[domainType][keyword] {
+					continue
+				}
+
+				// Skip if same domain as current step
+				if domainType == completedStep.DomainType {
+					continue
+				}
+
+				// Mark as searched
+				searchedKeywordsPerDomain[domainType][keyword] = true
+
+				// Create new step
+				newStep := module.DynamicPipelineStep{
+					DomainType:          domainType,
+					SearchParameter:     keyword,
+					Category:            category,
+					Keywords:            []string{keyword},
+					Success:             false,
+					Error:               nil,
+					Output:              nil,
+					KeywordsPerCategory: nil,
+					Depth:               completedStep.Depth + 1,
+				}
+
+				newSteps = append(newSteps, newStep)
+			}
+		}
+	}
+
+	return newSteps
+}
+
+// writeSSEEvent writes a Server-Sent Event
+func (s *Server) writeSSEEvent(w http.ResponseWriter, eventType string, data interface{}, flusher http.Flusher) {
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Error marshaling SSE data: %v", err)
+		return
+	}
+
+	// Write SSE format: event: type\ndata: json\n\n
+	fmt.Fprintf(w, "event: %s\n", eventType)
+	fmt.Fprintf(w, "data: %s\n\n", string(jsonData))
+
+	flusher.Flush()
+}
+
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(s.db.Health())
 	if err != nil {
@@ -415,4 +719,165 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	if _, err := w.Write(resp); err != nil {
 		log.Printf("Failed to write response: %v", err)
 	}
+}
+
+// Google Docking handlers
+
+func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get query parameters
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
+	}
+
+	// Parse optional parameters
+	maxResults := 10
+	if mr := r.URL.Query().Get("max_results"); mr != "" {
+		if parsed, err := strconv.Atoi(mr); err == nil && parsed > 0 {
+			maxResults = parsed
+		}
+	}
+
+	minRelevance := 0.1
+	if mr := r.URL.Query().Get("min_relevance"); mr != "" {
+		if parsed, err := strconv.ParseFloat(mr, 64); err == nil && parsed >= 0 && parsed <= 1 {
+			minRelevance = parsed
+		}
+	}
+
+	exactMatch := r.URL.Query().Get("exact_match") == "true"
+	caseSensitive := r.URL.Query().Get("case_sensitive") == "true"
+
+	// Parse include/exclude keywords
+	var includeKeywords, excludeKeywords []string
+	if ik := r.URL.Query().Get("include_keywords"); ik != "" {
+		includeKeywords = strings.Split(ik, ",")
+	}
+	if ek := r.URL.Query().Get("exclude_keywords"); ek != "" {
+		excludeKeywords = strings.Split(ek, ",")
+	}
+
+	// Create Google Docking connector
+	googleDocking := domain.NewGoogleDockingDomain()
+
+	// Create search parameters
+	params := domain.GoogleDockingSearchParams{
+		Query:           query,
+		MaxResults:      maxResults,
+		MinRelevance:    minRelevance,
+		ExactMatch:      exactMatch,
+		CaseSensitive:   caseSensitive,
+		IncludeKeywords: includeKeywords,
+		ExcludeKeywords: excludeKeywords,
+	}
+
+	// Perform search
+	results, err := googleDocking.SearchWithParams(params)
+	if err != nil {
+		http.Error(w, "Search failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get statistics
+	stats := googleDocking.GetSearchStatistics(results)
+
+	// Create response
+	response := map[string]interface{}{
+		"success":    true,
+		"query":      query,
+		"results":    results,
+		"statistics": stats,
+		"parameters": map[string]interface{}{
+			"max_results":      maxResults,
+			"min_relevance":    minRelevance,
+			"exact_match":      exactMatch,
+			"case_sensitive":   caseSensitive,
+			"include_keywords": includeKeywords,
+			"exclude_keywords": excludeKeywords,
+		},
+	}
+
+	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
+	}
+
+	googleDocking := domain.NewGoogleDockingDomain()
+	suggestions, err := googleDocking.GetSearchSuggestions(query)
+	if err != nil {
+		http.Error(w, "Failed to get suggestions: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success":     true,
+		"query":       query,
+		"suggestions": suggestions,
+	}
+
+	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		Results []domain.GoogleDockingResult `json:"results"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	googleDocking := domain.NewGoogleDockingDomain()
+	stats := googleDocking.GetSearchStatistics(request.Results)
+
+	response := map[string]interface{}{
+		"success":       true,
+		"statistics":    stats,
+		"total_results": len(request.Results),
+	}
+
+	jsonResp, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
 }

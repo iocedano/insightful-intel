@@ -1,14 +1,15 @@
-package domain
+package module
 
 import (
 	"encoding/json"
 	"fmt"
+	"insightful-intel/internal/domain"
 	"insightful-intel/internal/stuff"
 	"io"
 	"strings"
 )
 
-var _ GenericConnector[Entity] = &Onapi{}
+var _ domain.GenericConnector[domain.Entity] = &Onapi{}
 
 type Onapi struct {
 	Stuff    stuff.Stuff
@@ -16,8 +17,8 @@ type Onapi struct {
 	PathMap  stuff.PathMap
 }
 
-func (*Onapi) GetDomainType() DomainType {
-	return DomainTypeONAPI
+func (*Onapi) GetDomainType() domain.DomainType {
+	return domain.DomainTypeONAPI
 }
 
 // onapi endpoint
@@ -37,16 +38,16 @@ func NewOnapiDomain() Onapi {
 	}
 }
 
-// Implement GenericConnector[Entity] for Onapi
-func (o *Onapi) ProcessData(data Entity) (Entity, error) {
+// Implement GenericConnector[domain.Entity] for Onapi
+func (o *Onapi) ProcessData(data domain.Entity) (domain.Entity, error) {
 	// Process the entity data (e.g., clean, validate, enrich)
 	if err := o.ValidateData(data); err != nil {
-		return Entity{}, err
+		return domain.Entity{}, err
 	}
 	return o.TransformData(data), nil
 }
 
-func (o *Onapi) ValidateData(data Entity) error {
+func (o *Onapi) ValidateData(data domain.Entity) error {
 	// Validate the entity data
 	if data.NumeroExpediente == 0 {
 		return fmt.Errorf("NumeroExpediente is required")
@@ -57,7 +58,7 @@ func (o *Onapi) ValidateData(data Entity) error {
 	return nil
 }
 
-func (o *Onapi) TransformData(data Entity) Entity {
+func (o *Onapi) TransformData(data domain.Entity) domain.Entity {
 	transformed := data
 	transformed.Texto = strings.TrimSpace(data.Texto)
 	transformed.Titular = strings.TrimSpace(data.Titular)
@@ -66,82 +67,36 @@ func (o *Onapi) TransformData(data Entity) Entity {
 	return transformed
 }
 
-func (o *Onapi) GetDataByCategory(data Entity, category KeywordCategory) []string {
+func (o *Onapi) GetDataByCategory(data domain.Entity, category domain.KeywordCategory) []string {
 	result := []string{}
 
 	switch category {
-	case KeywordCategoryCompanyName:
+	case domain.KeywordCategoryCompanyName:
 		result = append(result, data.Texto)
-	case KeywordCategoryPersonName:
+	case domain.KeywordCategoryPersonName:
 		result = append(result, data.Titular, data.Gestor)
-	case KeywordCategoryAddress:
+	case domain.KeywordCategoryAddress:
 		result = append(result, data.Domicilio)
 	}
 
 	return result
 }
 
-func (o *Onapi) GetSearchableKeywordCategories() []KeywordCategory {
-	return []KeywordCategory{
-		KeywordCategoryCompanyName,
+func (o *Onapi) GetSearchableKeywordCategories() []domain.KeywordCategory {
+	return []domain.KeywordCategory{
+		domain.KeywordCategoryCompanyName,
 	}
 }
 
-func (o *Onapi) GetFoundKeywordCategories() []KeywordCategory {
-	return []KeywordCategory{
-		KeywordCategoryCompanyName,
-		KeywordCategoryPersonName,
-		KeywordCategoryAddress,
+func (o *Onapi) GetFoundKeywordCategories() []domain.KeywordCategory {
+	return []domain.KeywordCategory{
+		domain.KeywordCategoryCompanyName,
+		domain.KeywordCategoryPersonName,
+		domain.KeywordCategoryAddress,
 	}
 }
 
-type SearchComercialNameBodyResponse struct {
-	Data []Entity `json:"data"`
-}
-
-type DetailsBodyResponse struct {
-	Data Entity `json:"data"`
-}
-
-type Entity struct {
-	ID                int32        `json:"id"`
-	SerieExpediente   int32        `json:"serieExpediente"`
-	NumeroExpediente  int32        `json:"numeroExpediente"`
-	Certificado       string       `json:"certificado"`
-	Tipo              string       `json:"tipo"`
-	SubTipo           string       `json:"subTipo"`
-	Texto             string       `json:"texto"`
-	Clases            string       `json:"clases"`
-	AplicadoAProteger string       `json:"aplicadoAProteger"`
-	Expedicion        string       `json:"expedicion"`
-	Vencimiento       string       `json:"vencimiento"`
-	EnTramite         bool         `json:"enTramite"`
-	Titular           string       `json:"titular"`
-	Gestor            string       `json:"gestor"`
-	Domicilio         string       `json:"domicilio"`
-	Status            string       `json:"status"`
-	TipoSigno         string       `json:"tipoSigno"`
-	Imagenes          []Image      `json:"imagenes"`
-	ListaClases       []ListaClase `json:"listaClases"`
-}
-
-type ListaClase struct {
-	Numero    int32  `json:"numero"`
-	Productos string `json:"productos"`
-}
-
-type Image struct {
-	ID                 int32   `json:"id"`
-	SerieExpediente    int32   `json:"serieExpediente"`
-	NumeroExpediente   int32   `json:"numeroExpediente"`
-	DescripcionColores *string `json:"descripcionColores"`
-	Bytes              *string `json:"bytes"`
-	CodigoFormato      int32   `json:"codigoFormato"`
-	MimeType           string  `json:"mimeType"`
-	FileExtension      string  `json:"fileExtension"`
-}
-
-func (o *Onapi) SearchComercialName(query string) ([]Entity, error) {
+func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
 	response, err := o.Stuff.Client.Get(o.PathMap.GetURLFrom("firstpage"), map[string]string{
 		"subtipo":  "",
 		"texto":    query,
@@ -163,7 +118,7 @@ func (o *Onapi) SearchComercialName(query string) ([]Entity, error) {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var onapiResponse []Entity
+	var onapiResponse []domain.Entity
 	if err := json.Unmarshal(body, &onapiResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
@@ -181,7 +136,7 @@ func (o *Onapi) SearchComercialName(query string) ([]Entity, error) {
 	return onapiResponse, nil
 }
 
-func (o *Onapi) GetDetails(numero int32, serie int32) (*Entity, error) {
+func (o *Onapi) GetDetails(numero int32, serie int32) (*domain.Entity, error) {
 	response, err := o.Stuff.Client.Get(o.PathMap.GetURLFrom("detail"), map[string]string{
 		"numero":    fmt.Sprintf("%d", numero),
 		"tipoExped": "E",
@@ -202,7 +157,7 @@ func (o *Onapi) GetDetails(numero int32, serie int32) (*Entity, error) {
 	}
 
 	// Unmarshal the JSON response into the struct
-	var onapiResponse Entity
+	var onapiResponse domain.Entity
 	if err := json.Unmarshal(body, &onapiResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}

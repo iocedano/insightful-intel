@@ -35,7 +35,7 @@ type DomainSearchResult struct {
     Error               error
     DomainType          DomainType
     SearchParameter     string
-    KeywordsPerCategory map[DataCategory][]string
+    KeywordsPerCategory map[KeywordCategory][]string
     Output              any
 }
 ```

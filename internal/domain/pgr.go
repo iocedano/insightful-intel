@@ -85,19 +85,19 @@ func (p *Pgr) TransformData(data PGRNews) PGRNews {
 	return transformed
 }
 
-func (p *Pgr) GetDataByCategory(data PGRNews, category DataCategory) []string {
+func (p *Pgr) GetDataByCategory(data PGRNews, category KeywordCategory) []string {
 
 	return []string{}
 }
 
-func (p *Pgr) GetListOfSearchableCategory() []DataCategory {
-	return []DataCategory{
-		DataCategoryCompanyName,
-		DataCategoryPersonName,
-		DataCategoryAddress,
+func (p *Pgr) GetSearchableKeywordCategories() []KeywordCategory {
+	return []KeywordCategory{
+		KeywordCategoryCompanyName,
+		KeywordCategoryPersonName,
+		KeywordCategoryAddress,
 	}
 }
 
-func (p *Pgr) GetListOfRetrievedCategory() []DataCategory {
-	return []DataCategory{}
+func (p *Pgr) GetFoundKeywordCategories() []KeywordCategory {
+	return []KeywordCategory{}
 }
