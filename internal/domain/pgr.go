@@ -5,6 +5,7 @@ import (
 	"insightful-intel/internal/stuff"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gocolly/colly"
 )
@@ -25,8 +26,12 @@ func NewPgrDomain() Pgr {
 }
 
 type PGRNews struct {
-	URL   string `json:"url"`
-	Title string `json:"title"`
+	ID                   ID        `json:"id"`
+	DomainSearchResultID ID        `json:"domainSearchResultId"`
+	URL                  string    `json:"url"`
+	Title                string    `json:"title"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 }
 
 func (*Pgr) GetDomainType() DomainType {

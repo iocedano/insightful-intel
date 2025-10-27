@@ -6,6 +6,7 @@ import (
 	"insightful-intel/internal/stuff"
 	"io"
 	"strings"
+	"time"
 )
 
 var _ GenericConnector[Entity] = &Onapi{}
@@ -104,25 +105,28 @@ type DetailsBodyResponse struct {
 }
 
 type Entity struct {
-	ID                int32        `json:"id"`
-	SerieExpediente   int32        `json:"serieExpediente"`
-	NumeroExpediente  int32        `json:"numeroExpediente"`
-	Certificado       string       `json:"certificado"`
-	Tipo              string       `json:"tipo"`
-	SubTipo           string       `json:"subTipo"`
-	Texto             string       `json:"texto"`
-	Clases            string       `json:"clases"`
-	AplicadoAProteger string       `json:"aplicadoAProteger"`
-	Expedicion        string       `json:"expedicion"`
-	Vencimiento       string       `json:"vencimiento"`
-	EnTramite         bool         `json:"enTramite"`
-	Titular           string       `json:"titular"`
-	Gestor            string       `json:"gestor"`
-	Domicilio         string       `json:"domicilio"`
-	Status            string       `json:"status"`
-	TipoSigno         string       `json:"tipoSigno"`
-	Imagenes          []Image      `json:"imagenes"`
-	ListaClases       []ListaClase `json:"listaClases"`
+	ID                   ID           `json:"id"`
+	DomainSearchResultID ID           `json:"domainSearchResultId"`
+	SerieExpediente      int32        `json:"serieExpediente"`
+	NumeroExpediente     int32        `json:"numeroExpediente"`
+	Certificado          string       `json:"certificado"`
+	Tipo                 string       `json:"tipo"`
+	SubTipo              string       `json:"subTipo"`
+	Texto                string       `json:"texto"`
+	Clases               string       `json:"clases"`
+	AplicadoAProteger    string       `json:"aplicadoAProteger"`
+	Expedicion           string       `json:"expedicion"`
+	Vencimiento          string       `json:"vencimiento"`
+	EnTramite            bool         `json:"enTramite"`
+	Titular              string       `json:"titular"`
+	Gestor               string       `json:"gestor"`
+	Domicilio            string       `json:"domicilio"`
+	Status               string       `json:"status"`
+	TipoSigno            string       `json:"tipoSigno"`
+	Imagenes             []Image      `json:"imagenes"`
+	ListaClases          []ListaClase `json:"listaClases"`
+	CreatedAt            time.Time    `json:"createdAt"`
+	UpdatedAt            time.Time    `json:"updatedAt"`
 }
 
 type ListaClase struct {

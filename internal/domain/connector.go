@@ -85,10 +85,11 @@ type DomainSearchParams struct {
 
 // DomainSearchResult represents the result of a domain search
 type DomainSearchResult struct {
-	Success             bool
-	Error               error
+	ID                  ID
 	DomainType          DomainType
 	SearchParameter     string
-	KeywordsPerCategory map[KeywordCategory][]string
-	Output              any
+	KeywordsPerCategory map[KeywordCategory][]string `json:"keywordsPerCategory"`
+	Output              any                          `json:"output"`
+	Success             bool                         `json:"success"`
+	Error               error                        `json:"error"`
 }

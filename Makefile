@@ -9,6 +9,12 @@ build:
 	
 	@go build -o main cmd/api/main.go
 
+build-cli:
+	@echo "Building CLI..."
+	
+	
+	@go build -o main cmd/cli/main.go
+
 # Run the application
 run:
 	@go run cmd/api/main.go &

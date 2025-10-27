@@ -44,12 +44,16 @@ func NewGoogleDockingDomain() GoogleDocking {
 
 // GoogleDockingResult represents a search result from Google Docking
 type GoogleDockingResult struct {
-	URL         string   `json:"url"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Relevance   float64  `json:"relevance"`
-	Rank        int      `json:"rank"`
-	Keywords    []string `json:"keywords"`
+	ID                   ID        `json:"id"`
+	DomainSearchResultID ID        `json:"domainSearchResultId"`
+	URL                  string    `json:"url"`
+	Title                string    `json:"title"`
+	Description          string    `json:"description"`
+	Relevance            float64   `json:"relevance"`
+	Rank                 int       `json:"rank"`
+	Keywords             []string  `json:"keywords"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 }
 
 // GoogleDockingSearchParams holds parameters for Google Docking search

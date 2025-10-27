@@ -22,6 +22,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.HandleFunc("/dynamic", s.dynamicPipelineHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 
+	// Repository-based routes
+	mux.HandleFunc("/api/onapi", s.onapiHandler)
+	mux.HandleFunc("/api/scj", s.scjHandler)
+	mux.HandleFunc("/api/dgii", s.dgiiHandler)
+	mux.HandleFunc("/api/pgr", s.pgrHandler)
+	mux.HandleFunc("/api/docking", s.dockingHandler)
+	mux.HandleFunc("/api/pipeline", s.pipelineHandler)
+	mux.HandleFunc("/api/pipeline/save", s.savePipelineHandler)
+
 	// Wrap the mux with CORS middleware
 	return s.corsMiddleware(mux)
 }
@@ -373,6 +382,16 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
 		return
+	}
+
+	// Optionally save the result to database
+	if save := r.URL.Query().Get("save"); save == "true" {
+		repos := s.GetRepositories()
+		pipelineRepo := repos.GetPipelineRepository()
+		if err := pipelineRepo.Create(r.Context(), dynamicResult); err != nil {
+			// Log the error but don't fail the request
+			log.Printf("Failed to save pipeline result to database: %v", err)
+		}
 	}
 
 	// Convert to the standard ConnectorPipeline format for compatibility
