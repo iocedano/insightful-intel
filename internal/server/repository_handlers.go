@@ -10,8 +10,6 @@ import (
 	"insightful-intel/internal/module"
 )
 
-// Repository-based handlers
-
 // onapiHandler handles ONAPI repository operations
 func (s *Server) onapiHandler(w http.ResponseWriter, r *http.Request) {
 	repos := s.GetRepositories()
@@ -229,7 +227,8 @@ func (s *Server) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Try to parse as DynamicPipelineResult first
 		if dynamicResult, ok := s.parseDynamicPipelineResult(pipelineData); ok {
-			if err := pipelineRepo.Create(r.Context(), dynamicResult); err != nil {
+			_, err := pipelineRepo.CreateDynamicPipelineResult(r.Context(), dynamicResult)
+			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to save dynamic pipeline result: %v", err), http.StatusInternalServerError)
 				return
 			}
@@ -246,7 +245,8 @@ func (s *Server) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Try to parse as DomainSearchResult
 		if domainResult, ok := s.parseDomainSearchResult(pipelineData); ok {
-			if err := pipelineRepo.Create(r.Context(), domainResult); err != nil {
+			_, err := pipelineRepo.CreateDomainSearchResult(r.Context(), domainResult)
+			if err != nil {
 				http.Error(w, fmt.Sprintf("Failed to save domain search result: %v", err), http.StatusInternalServerError)
 				return
 			}
@@ -329,7 +329,8 @@ func (s *Server) savePipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Try to parse as DynamicPipelineResult first
 	if dynamicResult, ok := s.parseDynamicPipelineResult(pipelineData); ok {
-		if err := pipelineRepo.Create(r.Context(), dynamicResult); err != nil {
+		_, err := pipelineRepo.CreateDynamicPipelineResult(r.Context(), dynamicResult)
+		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to save dynamic pipeline result: %v", err), http.StatusInternalServerError)
 			return
 		}
@@ -346,7 +347,8 @@ func (s *Server) savePipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Try to parse as DomainSearchResult
 	if domainResult, ok := s.parseDomainSearchResult(pipelineData); ok {
-		if err := pipelineRepo.Create(r.Context(), domainResult); err != nil {
+		_, err := pipelineRepo.CreateDomainSearchResult(r.Context(), domainResult)
+		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to save domain search result: %v", err), http.StatusInternalServerError)
 			return
 		}

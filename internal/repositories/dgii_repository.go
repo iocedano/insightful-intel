@@ -27,6 +27,18 @@ func (r *DgiiRepository) Create(ctx context.Context, entity domain.Register) err
 
 // CreateWithDomainSearchResultID inserts a new DGII register with a domain search result ID
 func (r *DgiiRepository) CreateWithDomainSearchResultID(ctx context.Context, entity domain.Register) error {
+	// Check if RNC already exists
+	exists, existingID, err := r.RNCExists(ctx, entity.RNC)
+	if err != nil {
+		return fmt.Errorf("error checking RNC existence: %w", err)
+	}
+
+	if exists {
+		// Update the existing entity instead of creating a new one
+		return r.Update(ctx, existingID.String(), entity)
+	}
+
+	// Generate new ID for new entity
 	entity.ID = domain.NewID()
 
 	query := `
@@ -36,12 +48,52 @@ func (r *DgiiRepository) CreateWithDomainSearchResultID(ctx context.Context, ent
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err = r.db.ExecContext(ctx, query,
 		entity.ID, entity.DomainSearchResultID, entity.RNC, entity.RazonSocial, entity.NombreComercial, entity.Categoria,
 		entity.RegimenPagos, entity.FacturadorElectronico, entity.LicenciaComercial, entity.Estado,
 	)
 
 	return err
+}
+
+// RNCExists checks if an RNC already exists in the database
+func (r *DgiiRepository) RNCExists(ctx context.Context, rnc string) (bool, domain.ID, error) {
+	query := `SELECT id FROM dgii_registers WHERE rnc = ? LIMIT 1`
+
+	var id domain.ID
+	err := r.db.QueryRowContext(ctx, query, rnc).Scan(&id)
+
+	if err == sql.ErrNoRows {
+		return false, domain.ID{}, nil
+	}
+	if err != nil {
+		return false, domain.ID{}, err
+	}
+
+	return true, id, nil
+}
+
+// GetByRNC retrieves a DGII register by RNC
+func (r *DgiiRepository) GetByRNC(ctx context.Context, rnc string) (domain.Register, error) {
+	query := `
+		SELECT id, domain_search_result_id, rnc, razon_social, nombre_comercial, categoria, regimen_pagos,
+			   facturador_electronico, licencia_comercial, estado, created_at, updated_at
+		FROM dgii_registers 
+		WHERE rnc = ?
+	`
+
+	var entity domain.Register
+
+	err := r.db.QueryRowContext(ctx, query, rnc).Scan(
+		&entity.ID, &entity.DomainSearchResultID, &entity.RNC, &entity.RazonSocial, &entity.NombreComercial, &entity.Categoria,
+		&entity.RegimenPagos, &entity.FacturadorElectronico, &entity.LicenciaComercial, &entity.Estado,
+	)
+
+	if err != nil {
+		return domain.Register{}, err
+	}
+
+	return entity, nil
 }
 
 // GetByID retrieves a DGII register by its RNC
@@ -251,7 +303,7 @@ func (r *DgiiRepository) GetKeywordsByCategory(ctx context.Context, entityID str
 		return nil, err
 	}
 
-	// DGII registers don't implement GenericConnector, so we manually extract keywords
+	// DGII registers don't implement DomainConnector, so we manually extract keywords
 	return map[domain.KeywordCategory][]string{
 		domain.KeywordCategoryCompanyName:   []string{entity.RazonSocial, entity.NombreComercial},
 		domain.KeywordCategoryContributorID: []string{entity.RNC},

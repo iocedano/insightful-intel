@@ -289,7 +289,7 @@ func (r *ScjRepository) GetKeywordsByCategory(ctx context.Context, entityID stri
 		return nil, err
 	}
 
-	// SCJ cases don't implement GenericConnector, so we manually extract keywords
+	// SCJ cases don't implement DomainConnector, so we manually extract keywords
 	return map[domain.KeywordCategory][]string{
 		domain.KeywordCategoryPersonName:  []string{entity.Involucrados},
 		domain.KeywordCategoryCompanyName: []string{entity.DescTribunal, entity.DescMateria},

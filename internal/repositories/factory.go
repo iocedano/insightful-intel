@@ -77,18 +77,18 @@ func (f *RepositoryFactory) GetPipelineRepository() *PipelineRepository {
 	return NewPipelineRepository(f.db)
 }
 
-// // GetAllDomainRepositories returns all domain repositories
-// func (f *RepositoryFactory) GetAllDomainRepositories() *DomainRepositoryHandler {
-// 	return &DomainRepositoryHandler{
-// 		GetOnapiRepository:   f.GetOnapiRepository,
-// 		GetScjRepository:     f.GetScjRepository,
-// 		GetDgiiRepository:    f.GetDgiiRepository,
-// 		GetPgrRepository:     f.GetPgrRepository,
-// 		GetDockingRepository: f.GetDockingRepository,
-// 	}
-// }
+// GetAllDomainRepositories returns all domain repositories
+func (f *RepositoryFactory) GetAllDomainRepositories() *DomainRepositoryHandler {
+	return &DomainRepositoryHandler{
+		GetOnapiRepository:   f.GetOnapiRepository,
+		GetScjRepository:     f.GetScjRepository,
+		GetDgiiRepository:    f.GetDgiiRepository,
+		GetPgrRepository:     f.GetPgrRepository,
+		GetDockingRepository: f.GetDockingRepository,
+	}
+}
 
-// // GetRepositoryByDomainType returns a repository for a specific domain type
-// func (f *RepositoryFactory) GetRepositoryByDomainType(domainType domain.DomainType) any {
-// 	return f.GetAllDomainRepositories().GetDomainTypeRepo(domainType)
-// }
+// GetRepositoryByDomainType returns a repository for a specific domain type
+func (f *RepositoryFactory) GetRepositoryByDomainType(domainType domain.DomainType) any {
+	return f.GetAllDomainRepositories().GetDomainTypeRepo(domainType)
+}

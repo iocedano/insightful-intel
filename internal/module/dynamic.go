@@ -9,6 +9,15 @@ import (
 
 // SearchDomain performs a search using the specified domain type and parameters
 func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams) (*domain.DomainSearchResult, error) {
+	// Validate domain type
+	if !domain.IsValidDomainType(domainType) {
+		return &domain.DomainSearchResult{
+			Success:    false,
+			Error:      fmt.Errorf("unsupported domain type: %s", domainType),
+			DomainType: domainType,
+		}, fmt.Errorf("unsupported domain type: %s", domainType)
+	}
+
 	connector, err := CreateDomainConnector(domainType)
 	if err != nil {
 		return &domain.DomainSearchResult{
@@ -98,6 +107,11 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 
 // CreateDomainConnector creates a domain connector instance based on the domain type
 func CreateDomainConnector(domainType domain.DomainType) (any, error) {
+	// Validate domain type
+	if !domain.IsValidDomainType(domainType) {
+		return nil, fmt.Errorf("unsupported domain type: %s", domainType)
+	}
+
 	switch domainType {
 	case domain.DomainTypeONAPI:
 		onapi := NewOnapiDomain()
@@ -168,6 +182,7 @@ type DynamicPipelineStep struct {
 
 // DynamicPipelineResult represents the complete pipeline result
 type DynamicPipelineResult struct {
+	ID              string
 	Steps           []DynamicPipelineStep
 	TotalSteps      int
 	SuccessfulSteps int
@@ -185,6 +200,7 @@ func CreateDynamicPipeline(
 
 	// Initialize the pipeline
 	pipeline := &DynamicPipelineResult{
+		ID:     domain.NewID().String(),
 		Steps:  make([]DynamicPipelineStep, 0),
 		Config: config,
 	}
@@ -195,44 +211,27 @@ func CreateDynamicPipeline(
 		searchedKeywordsPerDomain[domainType] = make(map[string]bool)
 	}
 
-	// Add initial step
-	pipeline.Steps = append(pipeline.Steps,
-		DynamicPipelineStep{
-			DomainType:      domain.DomainTypeONAPI, // Start with ONAPI as it's most comprehensive
-			SearchParameter: initialQuery,
-			Category:        domain.KeywordCategoryCompanyName,
-			Keywords:        []string{initialQuery},
-			Depth:           0,
-		},
-		DynamicPipelineStep{
-			DomainType:      domain.DomainTypeDGII, // Start with ONAPI as it's most comprehensive
-			SearchParameter: initialQuery,
-			Category:        domain.KeywordCategoryContributorID,
-			Keywords:        []string{initialQuery},
-			Depth:           0,
-		},
-		DynamicPipelineStep{
-			DomainType:      domain.DomainTypePGR, // Start with ONAPI as it's most comprehensive
-			SearchParameter: initialQuery,
-			Category:        domain.KeywordCategoryPersonName,
-			Keywords:        []string{initialQuery},
-			Depth:           0,
-		},
-		DynamicPipelineStep{
-			DomainType:      domain.DomainTypeSCJ, // Start with ONAPI as it's most comprehensive
-			SearchParameter: initialQuery,
-			Category:        domain.KeywordCategoryContributorID,
-			Keywords:        []string{initialQuery},
-			Depth:           0,
-		},
-		DynamicPipelineStep{
-			DomainType:      domain.DomainTypeGoogleDocking, // Start with ONAPI as it's most comprehensive
-			SearchParameter: initialQuery,
-			Category:        domain.KeywordCategoryCompanyName,
-			Keywords:        []string{initialQuery},
-			Depth:           0,
-		},
-	)
+	// Add initial steps for all available domains
+	// Map each domain to its default category for initial search
+	initialDomainCategories := map[domain.DomainType]domain.KeywordCategory{
+		domain.DomainTypeONAPI:         domain.KeywordCategoryCompanyName,
+		domain.DomainTypeDGII:          domain.KeywordCategoryContributorID,
+		domain.DomainTypePGR:           domain.KeywordCategoryPersonName,
+		domain.DomainTypeSCJ:           domain.KeywordCategoryContributorID,
+		domain.DomainTypeGoogleDocking: domain.KeywordCategoryCompanyName,
+	}
+
+	for _, domainType := range availableDomains {
+		if category, ok := initialDomainCategories[domainType]; ok {
+			pipeline.Steps = append(pipeline.Steps, DynamicPipelineStep{
+				DomainType:      domainType,
+				SearchParameter: initialQuery,
+				Category:        category,
+				Keywords:        []string{initialQuery},
+				Depth:           0,
+			})
+		}
+	}
 
 	// Process the pipeline dynamically
 	currentStep := 0

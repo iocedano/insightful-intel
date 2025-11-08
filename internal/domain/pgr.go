@@ -10,7 +10,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-var _ GenericConnector[PGRNews] = &Pgr{}
+var _ DomainConnector[PGRNews] = &Pgr{}
 
 type Pgr struct {
 	Stuff    stuff.Stuff
@@ -62,7 +62,7 @@ func (p *Pgr) Search(query string) ([]PGRNews, error) {
 	return news, nil
 }
 
-// Implement GenericConnector[PGRNews] for Onapi
+// Implement DomainConnector[PGRNews] for Pgr
 func (p *Pgr) ProcessData(data PGRNews) (PGRNews, error) {
 	// Process the entity data (e.g., clean, validate, enrich)
 	if err := p.ValidateData(data); err != nil {

@@ -10,14 +10,26 @@ import (
 	"insightful-intel/internal/interactor"
 	"insightful-intel/internal/repositories"
 
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
+
+// contextKey is a custom type for context keys
+type contextKey string
+
+const executionIDKey contextKey = "executionID"
 
 var (
 	query          string
 	maxDepth       int
 	skipDuplicates bool
 )
+
+// GetExecutionID retrieves the execution ID from the context
+func GetExecutionID(ctx context.Context) (string, bool) {
+	executionID, ok := ctx.Value(executionIDKey).(string)
+	return executionID, ok
+}
 
 // rootCmd represents the base command
 var rootCmd = &cobra.Command{
@@ -32,27 +44,33 @@ var runCmd = &cobra.Command{
 	Short: "Run dynamic pipeline search",
 	Long: `Run a dynamic pipeline search with the specified query across multiple domains.
 The search will explore related entities across ONAPI, SCJ, DGII, PGR, and Google Docking.`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		query := args[0]
+		skipDuplicates := args[1] == "true"
 
-		log.Println("Running CLI")
+		// Generate a unique execution ID
+		executionID := uuid.New()
+
+		log.Printf("Starting CLI execution with ID: %s", executionID.String())
+
 		db := database.New()
-		pipelineResultRepo := repositories.NewPipelineRepository(db)
-		scjRepo := repositories.NewScjRepository(db)
-		dgiiRepo := repositories.NewDgiiRepository(db)
-		pgrRepo := repositories.NewPgrRepository(db)
-		googleDockingRepo := repositories.NewDockingRepository(db)
-		onapiRepo := repositories.NewOnapiRepository(db)
 
-		dynamicPipelineInteractor := interactor.NewDynamicPipelineInteractor(pipelineResultRepo, scjRepo, dgiiRepo, pgrRepo, googleDockingRepo, onapiRepo)
+		repositoryFactory := repositories.NewRepositoryFactory(db)
+		dynamicPipelineInteractor := interactor.NewDynamicPipelineInteractor(repositoryFactory)
 
-		log.Printf("Executing dynamic pipeline with query: %s, max depth: %d, skip duplicates: %v",
-			query, maxDepth, skipDuplicates)
+		// Create context with execution ID
+		ctx := context.WithValue(context.Background(), executionIDKey, executionID.String())
 
-		dynamicPipelineInteractor.ExecuteDynamicPipeline(context.Background(), query, maxDepth, skipDuplicates)
+		log.Printf("Executing dynamic pipeline [%s] with query: %s, max depth: %d, skip duplicates: %v",
+			executionID.String(), query, maxDepth, skipDuplicates)
 
-		log.Println("Dynamic pipeline execution completed")
+		err := dynamicPipelineInteractor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
+		if err != nil {
+			log.Fatalf("[%s] failed to execute dynamic pipeline: %v", executionID.String(), err)
+		}
+
+		log.Printf("[%s] Dynamic pipeline execution completed", executionID.String())
 	},
 }
 

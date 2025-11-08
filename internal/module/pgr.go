@@ -10,7 +10,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-var _ domain.GenericConnector[domain.PGRNews] = &Pgr{}
+var _ domain.DomainConnector[domain.PGRNews] = &Pgr{}
 
 type Pgr struct {
 	Stuff    stuff.Stuff

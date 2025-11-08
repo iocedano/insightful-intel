@@ -7,38 +7,21 @@ import (
 	"insightful-intel/internal/repositories"
 	"log"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 type DynamicPipelineInteractor struct {
-	pipelineResultRepo *repositories.PipelineRepository
-	scjRepo            *repositories.ScjRepository
-	dgiiRegisterRepo   *repositories.DgiiRepository
-	pgrNewsRepo        *repositories.PgrRepository
-	googleDockingRepo  *repositories.DockingRepository
-	onapiRepo          *repositories.OnapiRepository
+	repositories *repositories.RepositoryFactory
 }
 
 func NewDynamicPipelineInteractor(
-	pipelineResultRepo *repositories.PipelineRepository,
-	scjRepo *repositories.ScjRepository,
-	dgiiRegisterRepo *repositories.DgiiRepository,
-	pgrNewsRepo *repositories.PgrRepository,
-	googleDockingRepo *repositories.DockingRepository,
-	onapiRepo *repositories.OnapiRepository,
+	repositoryFactory *repositories.RepositoryFactory,
 ) *DynamicPipelineInteractor {
 	return &DynamicPipelineInteractor{
-		pipelineResultRepo: pipelineResultRepo,
-		scjRepo:            scjRepo,
-		dgiiRegisterRepo:   dgiiRegisterRepo,
-		pgrNewsRepo:        pgrNewsRepo,
-		googleDockingRepo:  googleDockingRepo,
-		onapiRepo:          onapiRepo,
+		repositories: repositoryFactory,
 	}
 }
 
-func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, query string, maxDepth int, skipDuplicates bool) {
+func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, query string, maxDepth int, skipDuplicates bool) error {
 	// Create a channel to receive pipeline steps
 	stepChan := make(chan module.DynamicPipelineStep, 100)
 	done := make(chan bool)
@@ -52,13 +35,7 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 	}
 
 	// Available domains
-	availableDomains := []domain.DomainType{
-		domain.DomainTypeONAPI,
-		domain.DomainTypeSCJ,
-		domain.DomainTypeDGII,
-		domain.DomainTypePGR,
-		domain.DomainTypeGoogleDocking,
-	}
+	availableDomains := domain.AllDomainTypes()
 
 	// Start pipeline execution in a goroutine
 	go func() {
@@ -69,20 +46,6 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 		dynamicResult, err := d.executeDynamicPipelineWithCallback(ctx, query, availableDomains, config, stepChan)
 		if err != nil {
 			// Send error as a step
-			errorStep := module.DynamicPipelineStep{
-				DomainType:      "ERROR",
-				SearchParameter: query,
-				Success:         false,
-				Error:           err,
-				Output:          nil,
-				Depth:           0,
-			}
-			stepChan <- errorStep
-			return
-		}
-
-		if err := d.pipelineResultRepo.Create(ctx, dynamicResult); err != nil {
-			log.Println("Error creating  dynamicResult pipeline result", err)
 			errorStep := module.DynamicPipelineStep{
 				DomainType:      "ERROR",
 				SearchParameter: query,
@@ -111,15 +74,6 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 		}
 		stepChan <- summaryStep
 	}()
-	// Flush the response to ensure immediate delivery
-	// flusher, ok := w.(http.Flusher)
-	// if ok {
-	// 	flusher.Flush()
-	// }
-	// if !ok {
-	// 	http.Error(w, "Streaming not supported", http.StatusInternalServerError)
-	// 	return
-	// }
 
 	// Stream the steps as they come
 	stepCount := 0
@@ -127,12 +81,7 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 		select {
 		case step, ok := <-stepChan:
 			if !ok {
-				// Channel closed, send completion event
-				// s.writeSSEEvent(w, "complete", map[string]interface{}{
-				// 	"message":     "Pipeline execution completed",
-				// 	"total_steps": stepCount,
-				// }, flusher)
-				return
+				return nil
 			}
 
 			stepCount++
@@ -147,32 +96,19 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 				KeywordsPerCategory: step.KeywordsPerCategory,
 			}
 
-			spew.Dump(pipelineStep)
-
-			// // Send step as SSE event
-			// eventData := map[string]interface{}{
-			// 	"step_number": stepCount,
-			// 	"step":        pipelineStep,
-			// 	"depth":       step.Depth,
-			// 	"category":    string(step.Category),
-			// 	"keywords":    step.Keywords,
-			// }
-
-			// eventType := "step"
-			// switch step.DomainType {
-			// case "error":
-			// 	eventType = "error"
-			// case "SUMMARY":
-			// 	eventType = "sumary"
-			// }
-
-			// s.writeSSEEvent(w, eventType, eventData, flusher)
+			_, err := d.repositories.GetPipelineRepository().CreateDomainSearchResult(ctx, &pipelineStep)
+			if err != nil {
+				log.Println("Error creating pipeline ----> ", err)
+				return err
+			}
 
 		case <-ctx.Done():
 			// Client disconnected
-			return
+			return nil
 		}
 	}
+
+	return nil
 }
 
 // executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
@@ -232,11 +168,78 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 			step.KeywordsPerCategory = result.KeywordsPerCategory
 		}
 
-		// ---
-		log.Println("Creating pipeline result")
-		if err := d.pipelineResultRepo.Create(ctx, result); err != nil {
-			log.Println("Error creating pipeline ---result", err)
+		created, err := d.repositories.GetPipelineRepository().CreateDomainSearchResult(ctx, result)
+		if err != nil {
+			log.Println("Error creating pipeline ----> ", err)
 			return nil, err
+		}
+
+		switch step.DomainType {
+		case domain.DomainTypeONAPI:
+			entities, ok := created.Output.([]domain.Entity)
+			if !ok {
+				log.Println("Error casting result output to []domain.Entity ----> ", err)
+				return nil, err
+			}
+			for _, entity := range entities {
+				entity.DomainSearchResultID = created.ID
+				if err := d.repositories.GetOnapiRepository().Create(ctx, entity); err != nil {
+					log.Println("Error creating onapi repository ----> ", err)
+					return nil, err
+				}
+			}
+		case domain.DomainTypeSCJ:
+			cases, ok := created.Output.([]domain.ScjCase)
+			if !ok {
+				log.Println("Error casting result output to []domain.ScjCase ", err)
+				return nil, err
+			}
+			for _, c := range cases {
+				c.DomainSearchResultID = created.ID
+				if err := d.repositories.GetScjRepository().Create(ctx, c); err != nil {
+					log.Println("Error creating scj repository ", err)
+					return nil, err
+				}
+			}
+		case domain.DomainTypeDGII:
+			results, ok := created.Output.([]domain.Register)
+			if !ok {
+				log.Println("Error casting result output to []domain.Register ", err)
+				return nil, err
+			}
+			for _, result := range results {
+				result.DomainSearchResultID = created.ID
+				if err := d.repositories.GetDgiiRepository().Create(ctx, result); err != nil {
+					log.Println("Error creating dgii repository ", err)
+					return nil, err
+				}
+			}
+		case domain.DomainTypePGR:
+			results, ok := created.Output.([]domain.PGRNews)
+			if !ok {
+				log.Println("Error casting result output to []domain.PGRNews ", err)
+				return nil, err
+			}
+			for _, result := range results {
+				result.DomainSearchResultID = created.ID
+				if err := d.repositories.GetPgrRepository().Create(ctx, result); err != nil {
+					log.Println("Error creating pgr repository ", err)
+					return nil, err
+				}
+			}
+		case domain.DomainTypeGoogleDocking:
+			results, ok := created.Output.([]domain.GoogleDockingResult)
+			if !ok {
+				log.Println("Error casting result output to []domain.GoogleDockingResult ", err)
+				return nil, err
+			}
+			for _, result := range results {
+				result.DomainSearchResultID = created.ID
+				if err := d.repositories.GetDockingRepository().Create(ctx, result); err != nil {
+					log.Println("Error creating docking repository ", err)
+					return nil, err
+				}
+			}
 		}
 
 		// Update counters
@@ -275,9 +278,13 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 		Config:          config,
 	}
 
-	d.pipelineResultRepo.Create(ctx, dynamicResult)
+	createdPipelineResult, err := d.repositories.GetPipelineRepository().CreateDynamicPipelineResult(ctx, dynamicResult)
+	if err != nil {
+		log.Println("Error creating pipeline ----> ", err)
+		return nil, err
+	}
 
-	return dynamicResult, nil
+	return createdPipelineResult, nil
 }
 
 func (*DynamicPipelineInteractor) generateNextSteps(completedStep module.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config module.DynamicPipelineConfig) []module.DynamicPipelineStep {

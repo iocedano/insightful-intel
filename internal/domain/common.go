@@ -32,3 +32,17 @@ func NewID() ID {
 func NewIDFromString(id string) ID {
 	return uuid.MustParse(id)
 }
+
+type contextKey string
+
+const executionIDKey contextKey = "executionID"
+
+// GetExecutionID retrieves the execution ID from the context
+func GetExecutionID(ctx context.Context) (string, bool) {
+	executionID, ok := ctx.Value(executionIDKey).(string)
+	return executionID, ok
+}
+
+func SetExecutionID(ctx context.Context, executionID string) context.Context {
+	return context.WithValue(ctx, executionIDKey, executionID)
+}

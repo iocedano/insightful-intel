@@ -4,11 +4,10 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./tmp/cli"
-  cmd = "go build -o ./tmp/cli cmd/cli/main.go"
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main cmd/api/main.go"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "node_modules", "frontend", "doc"]
-  exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
   follow_symlink = false
@@ -25,7 +24,7 @@ tmp_dir = "tmp"
   rerun = true
   rerun_delay = 500
   send_interrupt = false
-  stop_on_error = false
+  stop_on_error = true
 
 [color]
   app = ""

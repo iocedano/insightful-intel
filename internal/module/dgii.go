@@ -12,7 +12,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-var _ domain.GenericConnector[domain.Register] = &Dgii{}
+var _ domain.DomainConnector[domain.Register] = &Dgii{}
 
 type Dgii struct {
 	Stuff    stuff.Stuff
@@ -94,6 +94,11 @@ func NewDgiiDomain() Dgii {
 		BaseParh: "https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx",
 		Stuff:    *stuff.NewStuff(),
 	}
+}
+
+// Search implements DomainConnector interface by wrapping GetRegister
+func (dgi *Dgii) Search(query string) ([]domain.Register, error) {
+	return dgi.GetRegister(query)
 }
 
 func (dgi *Dgii) GetRegister(query string) ([]domain.Register, error) {

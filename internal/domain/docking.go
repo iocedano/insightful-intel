@@ -13,7 +13,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-var _ GenericConnector[GoogleDockingResult] = &GoogleDocking{}
+var _ DomainConnector[GoogleDockingResult] = &GoogleDocking{}
 
 var FRAUD_KEYWORDS = []string{
 	"fraude",
@@ -530,7 +530,7 @@ func min(a, b, c int) int {
 	return c
 }
 
-// Implement GenericConnector[GoogleDockingResult] for GoogleDocking
+// Implement DomainConnector[GoogleDockingResult] for GoogleDocking
 
 // ProcessData processes a Google Docking result
 func (gd *GoogleDocking) ProcessData(data GoogleDockingResult) (GoogleDockingResult, error) {

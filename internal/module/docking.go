@@ -14,7 +14,7 @@ import (
 	"github.com/gocolly/colly"
 )
 
-var _ domain.GenericConnector[domain.GoogleDockingResult] = &GoogleDocking{}
+var _ domain.DomainConnector[domain.GoogleDockingResult] = &GoogleDocking{}
 
 var FRAUD_KEYWORDS = []string{
 	"fraude",
@@ -506,7 +506,7 @@ func min(a, b, c int) int {
 	return c
 }
 
-// Implement GenericConnector[domain.GoogleDockingResult] for GoogleDocking
+// Implement DomainConnector[domain.GoogleDockingResult] for GoogleDocking
 
 // ProcessData processes a Google Docking result
 func (gd *GoogleDocking) ProcessData(data domain.GoogleDockingResult) (domain.GoogleDockingResult, error) {
@@ -553,12 +553,12 @@ func (gd *GoogleDocking) TransformData(data domain.GoogleDockingResult) domain.G
 // GetDataByCategory extracts data by keyword category
 func (gd *GoogleDocking) GetDataByCategory(data domain.GoogleDockingResult, category domain.KeywordCategory) []string {
 	switch category {
-	case domain.KeywordCategoryCompanyName:
-		return gd.extractCompanyNames(data)
-	case domain.KeywordCategoryPersonName:
-		return gd.extractPersonNames(data)
-	case domain.KeywordCategoryAddress:
-		return gd.extractAddresses(data)
+	// case domain.KeywordCategoryCompanyName:
+	// 	return gd.extractCompanyNames(data)
+	// case domain.KeywordCategoryPersonName:
+	// 	return gd.extractPersonNames(data)
+	// case domain.KeywordCategoryAddress:
+	// 	return gd.extractAddresses(data)
 	case domain.KeywordCategorySocialMedia:
 		return gd.extractSocialMedia(data)
 	default:
@@ -666,18 +666,16 @@ func (gd *GoogleDocking) extractSocialMedia(data domain.GoogleDockingResult) []s
 // GetSearchableKeywordCategories returns the categories that can be searched
 func (gd *GoogleDocking) GetSearchableKeywordCategories() []domain.KeywordCategory {
 	return []domain.KeywordCategory{
-		domain.KeywordCategoryPersonName,
-	}
-}
-
-// GetFoundKeywordCategories returns the categories that can be found in results
-func (gd *GoogleDocking) GetFoundKeywordCategories() []domain.KeywordCategory {
-	return []domain.KeywordCategory{
 		domain.KeywordCategoryCompanyName,
 		domain.KeywordCategoryPersonName,
 		domain.KeywordCategoryAddress,
 		domain.KeywordCategorySocialMedia,
 	}
+}
+
+// GetFoundKeywordCategories returns the categories that can be found in results
+func (gd *GoogleDocking) GetFoundKeywordCategories() []domain.KeywordCategory {
+	return []domain.KeywordCategory{}
 }
 
 // Advanced search methods

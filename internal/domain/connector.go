@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 type KeywordCategory string
 
 const (
@@ -10,8 +12,9 @@ const (
 	KeywordCategorySocialMedia   KeywordCategory = "social_media"
 )
 
-// Generic interface for connectors that can process data of the same type
-type GenericConnector[T any] interface {
+// DomainConnector is an interface for domain-specific connectors that can process,
+// search, and extract keywords from domain data of a specific type.
+type DomainConnector[T any] interface {
 	ProcessData(data T) (T, error)
 	ValidateData(data T) error
 	TransformData(data T) T
@@ -19,20 +22,21 @@ type GenericConnector[T any] interface {
 	GetSearchableKeywordCategories() []KeywordCategory
 	GetFoundKeywordCategories() []KeywordCategory
 	GetDomainType() DomainType
+	Search(query string) ([]T, error)
 }
 
-// Extended interface that includes generic methods
+// Extended interface that includes domain connector methods
 type ExtendedConnectorInterface[T any] interface {
-	GenericConnector[T]
+	DomainConnector[T]
 }
 
-// Generic utility function that works with any type implementing GenericConnector
-func ProcessGenericData[T any](connector GenericConnector[T], data T) (T, error) {
+// ProcessDomainData processes data using a domain connector
+func ProcessDomainData[T any](connector DomainConnector[T], data T) (T, error) {
 	return connector.ProcessData(data)
 }
 
-// Generic utility function for batch processing
-func ProcessBatchData[T any](connector GenericConnector[T], data []T) ([]T, error) {
+// ProcessBatchDomainData processes a batch of data using a domain connector
+func ProcessBatchDomainData[T any](connector DomainConnector[T], data []T) ([]T, error) {
 	results := make([]T, 0, len(data))
 	for _, item := range data {
 		processed, err := connector.ProcessData(item)
@@ -44,7 +48,8 @@ func ProcessBatchData[T any](connector GenericConnector[T], data []T) ([]T, erro
 	return results, nil
 }
 
-func GetCategoryByKeywords[T any](connector GenericConnector[T], data []T) map[KeywordCategory][]string {
+// GetCategoryByKeywords extracts keywords by category from domain data using a connector
+func GetCategoryByKeywords[T any](connector DomainConnector[T], data []T) map[KeywordCategory][]string {
 	result := map[KeywordCategory][]string{}
 
 	for _, d := range data {
@@ -71,6 +76,62 @@ const (
 	DomainTypePGR           DomainType = "PGR"
 	DomainTypeGoogleDocking DomainType = "GOOGLE_DOCKING"
 )
+
+// AllDomainTypes returns a list of all available domain types (excluding ERROR)
+func AllDomainTypes() []DomainType {
+	return []DomainType{
+		DomainTypeONAPI,
+		DomainTypeSCJ,
+		DomainTypeDGII,
+		DomainTypePGR,
+		DomainTypeGoogleDocking,
+	}
+}
+
+// DefaultDomainTypes returns a list of commonly used domain types for default searches
+func DefaultDomainTypes() []DomainType {
+	return []DomainType{
+		DomainTypeONAPI,
+		DomainTypeSCJ,
+		DomainTypeDGII,
+	}
+}
+
+// StringToDomainType maps string identifiers (typically from URL parameters) to DomainType
+var StringToDomainType = map[string]DomainType{
+	"onapi":   DomainTypeONAPI,
+	"scj":     DomainTypeSCJ,
+	"dgii":    DomainTypeDGII,
+	"pgr":     DomainTypePGR,
+	"docking": DomainTypeGoogleDocking,
+}
+
+// DomainTypeToString maps DomainType to string identifiers (for URL parameters)
+var DomainTypeToString = map[DomainType]string{
+	DomainTypeONAPI:         "onapi",
+	DomainTypeSCJ:           "scj",
+	DomainTypeDGII:          "dgii",
+	DomainTypePGR:           "pgr",
+	DomainTypeGoogleDocking: "docking",
+}
+
+// GetDomainTypeFromString converts a string to DomainType, returns error if not found
+func GetDomainTypeFromString(s string) (DomainType, error) {
+	if dt, ok := StringToDomainType[s]; ok {
+		return dt, nil
+	}
+	return DomainTypeERROR, fmt.Errorf("unknown domain type: %s", s)
+}
+
+// IsValidDomainType checks if a DomainType is valid (not ERROR)
+func IsValidDomainType(dt DomainType) bool {
+	for _, validType := range AllDomainTypes() {
+		if dt == validType {
+			return true
+		}
+	}
+	return false
+}
 
 // DomainSearchParams holds the search parameters for different domains
 type DomainSearchParams struct {

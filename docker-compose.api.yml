@@ -1,8 +1,8 @@
 services:
-  cli:
+  api:
     build:
       context: .
-      dockerfile: CLI.Dockerfile
+      dockerfile: API.Dockerfile
     ports:
       - ${PORT}:${PORT}
     environment:
@@ -19,10 +19,7 @@ services:
         condition: service_healthy
     networks:
       - blueprint
-    # Allow passing commands to the CLI
-    # Default CMD is Air for development, override with command for running
-    stdin_open: true
-    tty: true
+
   mysql_bp:
     image: mysql:latest
     restart: unless-stopped

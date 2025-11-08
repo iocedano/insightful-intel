@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"insightful-intel/internal/database"
 	"insightful-intel/internal/domain"
@@ -26,6 +27,19 @@ func (r *PgrRepository) Create(ctx context.Context, entity domain.PGRNews) error
 
 // CreateWithDomainSearchResultID inserts a new PGR news item with a domain search result ID
 func (r *PgrRepository) CreateWithDomainSearchResultID(ctx context.Context, entity domain.PGRNews) error {
+	// Check if URL already exists
+	exists, existingID, err := r.URLExists(ctx, entity.URL)
+	if err != nil {
+		return fmt.Errorf("error checking URL existence: %w", err)
+	}
+
+	if exists {
+		// Update the existing entity instead of creating a new one
+		entity.ID = existingID
+		return r.Update(ctx, entity)
+	}
+
+	// Generate new ID for new entity
 	entity.ID = domain.NewID()
 
 	query := `
@@ -34,11 +48,49 @@ func (r *PgrRepository) CreateWithDomainSearchResultID(ctx context.Context, enti
 		) VALUES (?, ?, ?, ?, NOW(), NOW())
 	`
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err = r.db.ExecContext(ctx, query,
 		entity.ID, entity.DomainSearchResultID, entity.URL, entity.Title,
 	)
 
 	return err
+}
+
+// URLExists checks if a URL already exists in the database
+func (r *PgrRepository) URLExists(ctx context.Context, url string) (bool, domain.ID, error) {
+	query := `SELECT id FROM pgr_news WHERE url = ? LIMIT 1`
+
+	var id domain.ID
+	err := r.db.QueryRowContext(ctx, query, url).Scan(&id)
+
+	if err == sql.ErrNoRows {
+		return false, domain.ID{}, nil
+	}
+	if err != nil {
+		return false, domain.ID{}, err
+	}
+
+	return true, id, nil
+}
+
+// GetByURL retrieves a PGR news item by URL
+func (r *PgrRepository) GetByURL(ctx context.Context, url string) (domain.PGRNews, error) {
+	query := `
+		SELECT id, domain_search_result_id, url, title, created_at, updated_at
+		FROM pgr_news 
+		WHERE url = ?
+	`
+
+	var entity domain.PGRNews
+
+	err := r.db.QueryRowContext(ctx, query, url).Scan(
+		&entity.ID, &entity.DomainSearchResultID, &entity.URL, &entity.Title,
+	)
+
+	if err != nil {
+		return domain.PGRNews{}, err
+	}
+
+	return entity, nil
 }
 
 // GetByID retrieves a PGR news item by its URL
@@ -219,7 +271,5 @@ func (r *PgrRepository) GetKeywordsByCategory(ctx context.Context, entity domain
 		return nil, err
 	}
 
-	return map[domain.KeywordCategory][]string{
-		domain.KeywordCategoryCompanyName: {entity.Title},
-	}, nil
+	return map[domain.KeywordCategory][]string{}, nil
 }

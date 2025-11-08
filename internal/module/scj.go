@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-var _ domain.GenericConnector[domain.ScjCase] = &Scj{}
+var _ domain.DomainConnector[domain.ScjCase] = &Scj{}
 
 type Scj struct {
 	Stuff    stuff.Stuff
@@ -61,7 +61,7 @@ func (dgi *Scj) GetDomainType() domain.DomainType {
 	return domain.DomainTypeSCJ
 }
 
-// Implement GenericConnector[domain.ScjCase] for Onapi
+// Implement DomainConnector[domain.ScjCase] for Scj
 func (p *Scj) ProcessData(data domain.ScjCase) (domain.ScjCase, error) {
 	// Process the entity data (e.g., clean, validate, enrich)
 	if err := p.ValidateData(data); err != nil {

@@ -32,7 +32,7 @@ func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, 
 
 	query := `
 		INSERT INTO google_docking_results (
-			id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+			id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
@@ -48,7 +48,7 @@ func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, 
 // GetByID retrieves a Google Docking result by its URL
 func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.GoogleDockingResult, error) {
 	query := `
-		SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
 		WHERE id = ?
 	`
@@ -74,7 +74,7 @@ func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.Goog
 func (r *DockingRepository) Update(ctx context.Context, id string, entity domain.GoogleDockingResult) error {
 	query := `
 		UPDATE google_docking_results SET
-			domain_search_result_id = ?, title = ?, description = ?, relevance = ?, rank = ?, keywords = ?, updated_at = NOW()
+			domain_search_result_id = ?, title = ?, description = ?, relevance = ?, search_rank = ?, keywords = ?, updated_at = NOW()
 		WHERE id = ?
 	`
 
@@ -97,7 +97,7 @@ func (r *DockingRepository) Delete(ctx context.Context, id string) error {
 // List retrieves multiple Google Docking results with pagination
 func (r *DockingRepository) List(ctx context.Context, offset, limit int) ([]domain.GoogleDockingResult, error) {
 	query := `
-		SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
 		ORDER BY relevance DESC, created_at DESC
 		LIMIT ? OFFSET ?
@@ -141,7 +141,7 @@ func (r *DockingRepository) Count(ctx context.Context) (int64, error) {
 // Search performs a search query on Google Docking results
 func (r *DockingRepository) Search(ctx context.Context, query string, offset, limit int) ([]domain.GoogleDockingResult, error) {
 	searchQuery := `
-		SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
 		WHERE id LIKE ? OR domain_search_result_id LIKE ? OR title LIKE ? OR description LIKE ? OR url LIKE ?
 		ORDER BY relevance DESC, created_at DESC
@@ -185,7 +185,7 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 	switch category {
 	case domain.KeywordCategoryPersonName:
 		searchQuery = `
-			SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+			SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 			FROM google_docking_results 
 			WHERE title LIKE ? OR description LIKE ?
 			ORDER BY relevance DESC, created_at DESC
@@ -193,7 +193,7 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 		`
 	case domain.KeywordCategoryCompanyName:
 		searchQuery = `
-			SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+			SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 			FROM google_docking_results 
 			WHERE title LIKE ? OR description LIKE ?
 			ORDER BY relevance DESC, created_at DESC
@@ -201,7 +201,7 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 		`
 	case domain.KeywordCategoryAddress:
 		searchQuery = `
-			SELECT id, domain_search_result_id, description url, title, description, relevance, rank, keywords, created_at, updated_at
+			SELECT id, domain_search_result_id, description url, title, description, relevance, search_rank, keywords, created_at, updated_at
 			FROM google_docking_results 
 			WHERE description LIKE ?
 			ORDER BY relevance DESC, created_at DESC
@@ -209,7 +209,7 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 		`
 	case domain.KeywordCategorySocialMedia:
 		searchQuery = `
-			SELECT id, domain_search_result_id, url, title, description, relevance, rank, keywords, created_at, updated_at
+			SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 			FROM google_docking_results 
 			WHERE url LIKE ? OR title LIKE ? OR description LIKE ?
 			ORDER BY relevance DESC, created_at DESC
@@ -279,9 +279,9 @@ func (r *DockingRepository) GetKeywordsByCategory(ctx context.Context, entityID 
 
 	docking := domain.NewGoogleDockingDomain()
 	return map[domain.KeywordCategory][]string{
-		domain.KeywordCategoryCompanyName: docking.GetDataByCategory(entity, domain.KeywordCategoryCompanyName),
-		domain.KeywordCategoryPersonName:  docking.GetDataByCategory(entity, domain.KeywordCategoryPersonName),
-		domain.KeywordCategoryAddress:     docking.GetDataByCategory(entity, domain.KeywordCategoryAddress),
+		// domain.KeywordCategoryCompanyName: docking.GetDataByCategory(entity, domain.KeywordCategoryCompanyName),
+		// domain.KeywordCategoryPersonName:  docking.GetDataByCategory(entity, domain.KeywordCategoryPersonName),
+		// domain.KeywordCategoryAddress:     docking.GetDataByCategory(entity, domain.KeywordCategoryAddress),
 		domain.KeywordCategorySocialMedia: docking.GetDataByCategory(entity, domain.KeywordCategorySocialMedia),
 	}, nil
 }

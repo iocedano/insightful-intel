@@ -9,6 +9,8 @@ RUN go mod download
 
 COPY . .
 
+EXPOSE ${PORT}
+
 # Set Air for development mode
-CMD ["air", "-c", ".air-cli.toml"]
+CMD ["air", "-c", ".air-api.toml"]
 

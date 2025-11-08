@@ -21,21 +21,10 @@ func NewPipelineRepository(db database.Service) *PipelineRepository {
 	}
 }
 
-// Create inserts a new pipeline result
-func (r *PipelineRepository) Create(ctx context.Context, entity any) error {
-	switch v := entity.(type) {
-	case *domain.DomainSearchResult:
-		return r.createDomainSearchResult(ctx, v)
-	case *module.DynamicPipelineResult:
-		return r.createDynamicPipelineResult(ctx, v)
-	default:
-		return fmt.Errorf("unsupported pipeline result type: %T", entity)
-	}
-}
-
 // createDomainSearchResult inserts a DomainSearchResult
-func (r *PipelineRepository) createDomainSearchResult(ctx context.Context, result *domain.DomainSearchResult) error {
-	result.ID = domain.NewID()
+func (r *PipelineRepository) CreateDomainSearchResult(ctx context.Context, result *domain.DomainSearchResult) (*domain.DomainSearchResult, error) {
+	id := domain.NewID()
+	result.ID = id
 
 	query := `
 		INSERT INTO domain_search_results (
@@ -54,33 +43,37 @@ func (r *PipelineRepository) createDomainSearchResult(ctx context.Context, resul
 	_, err := r.db.ExecContext(ctx, query,
 		result.ID, result.Success, errorMessage, string(result.DomainType), result.SearchParameter, keywordsJSON, outputJSON,
 	)
+	if err != nil {
+		return nil, err
+	}
 
-	return err
+	return result, nil
 }
 
 // createDynamicPipelineResult inserts a DynamicPipelineResult
-func (r *PipelineRepository) createDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) error {
+func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) (*module.DynamicPipelineResult, error) {
 	query := `
 		INSERT INTO dynamic_pipeline_results (
 			id, total_steps, successful_steps, failed_steps, max_depth_reached, config, created_at, updated_at
-		) VALUES (UUID(), ?, ?, ?, ?, ?, NOW(), NOW())
+		) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
 	configJSON, _ := json.Marshal(result.Config)
 
 	_, err := r.db.ExecContext(ctx, query,
-		result.TotalSteps, result.SuccessfulSteps, result.FailedSteps, result.MaxDepthReached, configJSON,
+		result.ID, result.TotalSteps, result.SuccessfulSteps, result.FailedSteps, result.MaxDepthReached, configJSON,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Get the generated UUID
-	var pipelineID string
-	idQuery := `SELECT id FROM dynamic_pipeline_results WHERE created_at = (SELECT MAX(created_at) FROM dynamic_pipeline_results)`
-	r.db.QueryRowContext(ctx, idQuery).Scan(&pipelineID)
+	err = r.insertPipelineSteps(ctx, result.ID, result.Steps)
+	if err != nil {
+		return nil, err
+	}
 
-	return r.insertPipelineSteps(ctx, pipelineID, result.Steps)
+	return result, nil
 }
 
 // insertPipelineSteps inserts individual pipeline steps
