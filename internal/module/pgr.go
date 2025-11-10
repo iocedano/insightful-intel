@@ -18,8 +18,8 @@ type Pgr struct {
 	PathMap  stuff.PathMap
 }
 
-func NewPgrDomain() Pgr {
-	return Pgr{
+func NewPgrDomain() domain.DomainConnector[domain.PGRNews] {
+	return &Pgr{
 		BaseParh: "https://pgr.gob.do/",
 		Stuff:    *stuff.NewStuff(),
 	}

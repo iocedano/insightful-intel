@@ -28,29 +28,52 @@ func (r *ScjRepository) Create(ctx context.Context, entity domain.ScjCase) error
 // CreateWithDomainSearchResultID inserts a new SCJ case with a domain search result ID
 func (r *ScjRepository) CreateWithDomainSearchResultID(ctx context.Context, entity domain.ScjCase) error {
 	entity.ID = domain.NewID()
+	// Check if insert columns and parameters match -- compare to ScjCase struct fields
 	query := `
-		INSERT INTO scj_cases (
-			id, domain_search_result_id, linea, agno_cabecera, mes_cabecera, url_cabecera, url_cuerpo,
-			id_expediente, no_expediente, no_sentencia, no_unico, no_interno,
-			id_tribunal, desc_tribunal, id_materia, desc_materia, fecha_fallo,
-			involucrados, guid_blob, tipo_documento_adjunto, total_filas,
-			url_blob, extension, origen, activo, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+		INSERT INTO scj_cases 
+		(id, domain_search_result_id, linea, agno_cabecera, mes_cabecera, url_cabecera, url_cuerpo, id_expediente, 
+		no_expediente, no_sentencia, no_unico, no_interno, id_tribunal, desc_tribunal, id_materia, desc_materia, fecha_fallo, 
+		involucrados, guid_blob, tipo_documento_adjunto, total_filas, url_blob, extension, origen, activo, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
-		entity.ID, entity.DomainSearchResultID, entity.Linea, entity.AgnoCabecera, entity.MesCabecera, entity.URLCabecera, entity.URLCuerpo,
-		entity.IDExpediente, entity.NoExpediente, entity.NoSentencia, entity.NoUnico, entity.NoInterno,
-		entity.IDTribunal, entity.DescTribunal, entity.IDMateria, entity.DescMateria, entity.FechaFallo,
-		entity.Involucrados, entity.GuidBlob, entity.TipoDocumentoAdjunto, entity.TotalFilas,
-		entity.URLBlob, entity.Extension, entity.Origen, entity.Activo,
+		entity.ID,
+		entity.DomainSearchResultID,
+		entity.Linea,
+		entity.AgnoCabecera,
+		entity.MesCabecera,
+		entity.URLCabecera,
+		entity.URLCuerpo,
+		entity.IDExpediente,
+		entity.NoExpediente,
+		entity.NoSentencia,
+		entity.NoUnico,
+		entity.NoInterno,
+		entity.IDTribunal,
+		entity.DescTribunal,
+		entity.IDMateria,
+		entity.DescMateria,
+		entity.FechaFallo,
+		entity.Involucrados,
+		entity.GuidBlob,
+		entity.TipoDocumentoAdjunto,
+		entity.TotalFilas,
+		entity.URLBlob,
+		entity.Extension,
+		entity.Origen,
+		entity.Activo,
 	)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("error creating scj case: %w", err)
+	}
+
+	return nil
 }
 
 // GetByID retrieves an SCJ case by its ID
-func (r *ScjRepository) GetByID(ctx context.Context, id string) (domain.ScjCase, error) {
+func (r *ScjRepository) GetByID(ctx context.Context, id int) (domain.ScjCase, error) {
 	query := `
 		SELECT linea, agno_cabecera, mes_cabecera, url_cabecera, url_cuerpo,
 			   id_expediente, no_expediente, no_sentencia, no_unico, no_interno,
@@ -79,7 +102,7 @@ func (r *ScjRepository) GetByID(ctx context.Context, id string) (domain.ScjCase,
 }
 
 // Update modifies an existing SCJ case
-func (r *ScjRepository) Update(ctx context.Context, id string, entity domain.ScjCase) error {
+func (r *ScjRepository) Update(ctx context.Context, idExpediente int, entity domain.ScjCase) error {
 	query := `
 		UPDATE scj_cases SET
 			linea = ?, agno_cabecera = ?, mes_cabecera = ?, url_cabecera = ?, url_cuerpo = ?,
@@ -95,7 +118,7 @@ func (r *ScjRepository) Update(ctx context.Context, id string, entity domain.Scj
 		entity.NoExpediente, entity.NoSentencia, entity.NoUnico, entity.NoInterno,
 		entity.IDTribunal, entity.DescTribunal, entity.IDMateria, entity.DescMateria, entity.FechaFallo,
 		entity.Involucrados, entity.GuidBlob, entity.TipoDocumentoAdjunto, entity.TotalFilas,
-		entity.URLBlob, entity.Extension, entity.Origen, entity.Activo, id,
+		entity.URLBlob, entity.Extension, entity.Origen, entity.Activo, idExpediente,
 	)
 
 	return err
@@ -283,7 +306,7 @@ func (r *ScjRepository) GetBySearchParameter(ctx context.Context, searchParam st
 }
 
 // GetKeywordsByCategory retrieves keywords grouped by category for an SCJ case
-func (r *ScjRepository) GetKeywordsByCategory(ctx context.Context, entityID string) (map[domain.KeywordCategory][]string, error) {
+func (r *ScjRepository) GetKeywordsByCategory(ctx context.Context, entityID int) (map[domain.KeywordCategory][]string, error) {
 	entity, err := r.GetByID(ctx, entityID)
 	if err != nil {
 		return nil, err

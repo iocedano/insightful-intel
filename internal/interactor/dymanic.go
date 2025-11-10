@@ -7,6 +7,8 @@ import (
 	"insightful-intel/internal/repositories"
 	"log"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type DynamicPipelineInteractor struct {
@@ -86,21 +88,7 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 
 			stepCount++
 
-			// Convert step to ConnectorPipeline format
-			pipelineStep := domain.DomainSearchResult{
-				Success:             step.Success,
-				Error:               step.Error,
-				DomainType:          step.DomainType,
-				SearchParameter:     step.SearchParameter,
-				Output:              step.Output,
-				KeywordsPerCategory: step.KeywordsPerCategory,
-			}
-
-			_, err := d.repositories.GetPipelineRepository().CreateDomainSearchResult(ctx, &pipelineStep)
-			if err != nil {
-				log.Println("Error creating pipeline ----> ", err)
-				return err
-			}
+			spew.Dump("step", step)
 
 		case <-ctx.Done():
 			// Client disconnected
@@ -120,13 +108,18 @@ func (s *DynamicPipelineInteractor) executeDynamicPipelineWithCallback(ctx conte
 // executeStreamingPipeline executes the pipeline with real-time streaming
 func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
 	// Create the initial pipeline steps
-	initialResult, err := module.CreateDynamicPipeline(query, availableDomains, config)
+	createdPipelineResult, err := module.CreateDynamicPipeline(query, availableDomains, config)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = d.repositories.GetPipelineRepository().CreateDynamicPipelineResult(ctx, createdPipelineResult)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get initial steps from the result
-	initialSteps := initialResult.Steps
+	initialSteps := createdPipelineResult.Steps
 
 	totalSteps := 0
 	successfulSteps := 0
@@ -151,6 +144,8 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 		step := stepQueue[0]
 		stepQueue = stepQueue[1:]
 
+		step.PipelineID = createdPipelineResult.ID
+
 		// Send step start event
 		startStep := step
 		startStep.Success = false
@@ -168,9 +163,17 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 			step.KeywordsPerCategory = result.KeywordsPerCategory
 		}
 
+		err = d.repositories.GetPipelineRepository().CreateDynamicPipelineStep(ctx, &step)
+		if err != nil {
+			log.Println("Error creating pipeline step ----> ", err)
+			return nil, err
+		}
+
+		result.PipelineStepsID = step.ID
+
 		created, err := d.repositories.GetPipelineRepository().CreateDomainSearchResult(ctx, result)
 		if err != nil {
-			log.Println("Error creating pipeline ----> ", err)
+			log.Println("Error creating pipeline CreateDomainSearchResult ----> ", err)
 			return nil, err
 		}
 
@@ -197,7 +200,7 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 			for _, c := range cases {
 				c.DomainSearchResultID = created.ID
 				if err := d.repositories.GetScjRepository().Create(ctx, c); err != nil {
-					log.Println("Error creating scj repository ", err)
+					log.Println("Error creating scj repository ", err, c)
 					return nil, err
 				}
 			}
@@ -227,7 +230,7 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 					return nil, err
 				}
 			}
-		case domain.DomainTypeGoogleDocking:
+		case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
 			results, ok := created.Output.([]domain.GoogleDockingResult)
 			if !ok {
 				log.Println("Error casting result output to []domain.GoogleDockingResult ", err)
@@ -269,18 +272,15 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 	}
 
 	// Create final result
-	dynamicResult := &module.DynamicPipelineResult{
-		Steps:           processedSteps,
-		TotalSteps:      totalSteps,
-		SuccessfulSteps: successfulSteps,
-		FailedSteps:     failedSteps,
-		MaxDepthReached: maxDepthReached,
-		Config:          config,
-	}
+	createdPipelineResult.TotalSteps = totalSteps
+	createdPipelineResult.SuccessfulSteps = successfulSteps
+	createdPipelineResult.FailedSteps = failedSteps
+	createdPipelineResult.MaxDepthReached = maxDepthReached
+	createdPipelineResult.Config = config
 
-	createdPipelineResult, err := d.repositories.GetPipelineRepository().CreateDynamicPipelineResult(ctx, dynamicResult)
+	err = d.repositories.GetPipelineRepository().UpdateDynamicPipelineResult(ctx, createdPipelineResult)
 	if err != nil {
-		log.Println("Error creating pipeline ----> ", err)
+		log.Println("Error creating pipeline result ----> ", err)
 		return nil, err
 	}
 

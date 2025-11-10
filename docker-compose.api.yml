@@ -5,6 +5,8 @@ services:
       dockerfile: API.Dockerfile
     ports:
       - ${PORT}:${PORT}
+    volumes:
+      - ./:/app
     environment:
       APP_ENV: ${APP_ENV}
       PORT: ${PORT}

@@ -20,8 +20,8 @@ type Scj struct {
 	PathMap  stuff.PathMap
 }
 
-func NewScjDomain() Scj {
-	return Scj{
+func NewScjDomain() domain.DomainConnector[domain.ScjCase] {
+	return &Scj{
 		BaseParh: "https://consultasentenciascj.poderjudicial.gob.do/Home/GetExpedientes",
 		Stuff:    *stuff.NewStuff(),
 	}

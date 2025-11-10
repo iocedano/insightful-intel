@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"insightful-intel/internal/database"
 	"insightful-intel/internal/domain"
+	"insightful-intel/internal/module"
 )
 
 // OnapiRepository implements DomainRepository for ONAPI Entity domain type
@@ -36,7 +37,7 @@ func (r *OnapiRepository) CreateWithDomainSearchResultID(ctx context.Context, en
 			texto, clases, aplicado_a_proteger, expedicion, vencimiento, en_tramite,
 			titular, gestor, domicilio, status, tipo_signo, imagenes, lista_clases,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
 	imagenesJSON, _ := json.Marshal(entity.Imagenes)
@@ -320,7 +321,7 @@ func (r *OnapiRepository) GetKeywordsByCategory(ctx context.Context, entityID st
 		return nil, err
 	}
 
-	onapi := domain.NewOnapiDomain()
+	onapi := module.NewOnapiDomain()
 	return map[domain.KeywordCategory][]string{
 		domain.KeywordCategoryCompanyName: onapi.GetDataByCategory(entity, domain.KeywordCategoryCompanyName),
 		domain.KeywordCategoryPersonName:  onapi.GetDataByCategory(entity, domain.KeywordCategoryPersonName),

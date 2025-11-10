@@ -5,8 +5,6 @@ import (
 	"insightful-intel/internal/domain"
 )
 
-// DomainSearchParams holds the search parameters for different domains
-
 // SearchDomain performs a search using the specified domain type and parameters
 func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams) (*domain.DomainSearchResult, error) {
 	// Validate domain type
@@ -18,48 +16,44 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 		}, fmt.Errorf("unsupported domain type: %s", domainType)
 	}
 
-	connector, err := CreateDomainConnector(domainType)
-	if err != nil {
-		return &domain.DomainSearchResult{
-			Success:    false,
-			Error:      err,
-			DomainType: domainType,
-		}, err
-	}
-
 	// Perform the search based on domain type
 	var output any
 	var searchErr error
 
 	switch domainType {
 	case domain.DomainTypeONAPI:
-		onapi := connector.(*Onapi)
-		entities, err := onapi.SearchComercialName(params.Query)
-		output = entities
-		searchErr = err
+		onapi := NewOnapiDomain()
+		output, searchErr = onapi.Search(params.Query)
 	case domain.DomainTypeSCJ:
-		scj := connector.(*Scj)
-		cases, err := scj.Search(params.Query)
-		output = cases
-		searchErr = err
+		scj := NewScjDomain()
+		output, searchErr = scj.Search(params.Query)
 	case domain.DomainTypeDGII:
-		dgii := connector.(*Dgii)
-		registers, err := dgii.GetRegister(params.Query)
-		output = registers
-		searchErr = err
+		dgii := NewDgiiDomain()
+		output, searchErr = dgii.Search(params.Query)
 	case domain.DomainTypePGR:
-		pgr := connector.(*Pgr)
-		registers, err := pgr.Search(params.Query)
-		output = registers
-		searchErr = err
+		pgr := NewPgrDomain()
+		output, searchErr = pgr.Search(params.Query)
 	case domain.DomainTypeGoogleDocking:
-		registers, err := NewGoogleDockingBuilder().
+		output, searchErr = NewGoogleDockingBuilder().
 			Query(params.Query).
-			IncludeKeywords(FRAUD_KEYWORDS...).
+			IncludeKeywords(domain.FRAUD_KEYWORDS...).
 			Build()
-
-		output = registers
-		searchErr = err
+	case domain.DomainTypeSocialMedia:
+		output, searchErr = NewGoogleDockingBuilder().
+			Query(params.Query).
+			SitesKeywords(domain.SOCIAL_MEDIA_SITES_KEYWORDS...).
+			Build()
+	case domain.DomainTypeFileType:
+		output, searchErr = NewGoogleDockingBuilder().
+			Query(params.Query).
+			FileTypeKeywords(domain.FILE_TYPE_KEYWORDS...).
+			Build()
+	case domain.DomainTypeXSocialMedia:
+		output, searchErr = NewGoogleDockingBuilder().
+			Query(params.Query).
+			InURLKeywords(domain.X_IN_URL_KEYWORDS...).
+			SitesKeywords([]string{"x.com"}...).
+			Build()
 	default:
 		return &domain.DomainSearchResult{
 			Success:    false,
@@ -74,23 +68,23 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 		switch domainType {
 		case domain.DomainTypeONAPI:
 			if entities, ok := output.([]domain.Entity); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&Onapi{}, entities)
+				keywordsPerCategory = domain.GetCategoryByKeywords(NewOnapiDomain(), entities)
 			}
 		case domain.DomainTypeSCJ:
 			if cases, ok := output.([]domain.ScjCase); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&Scj{}, cases)
+				keywordsPerCategory = domain.GetCategoryByKeywords(NewScjDomain(), cases)
 			}
 		case domain.DomainTypeDGII:
 			if registers, ok := output.([]domain.Register); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&Dgii{}, registers)
+				keywordsPerCategory = domain.GetCategoryByKeywords(NewDgiiDomain(), registers)
 			}
 		case domain.DomainTypePGR:
 			if registers, ok := output.([]domain.PGRNews); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&domain.Pgr{}, registers)
+				keywordsPerCategory = domain.GetCategoryByKeywords(NewPgrDomain(), registers)
 			}
-		case domain.DomainTypeGoogleDocking:
+		case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
 			if registers, ok := output.([]domain.GoogleDockingResult); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&domain.GoogleDocking{}, registers)
+				keywordsPerCategory = domain.GetCategoryByKeywords(&GoogleDocking{}, registers)
 			}
 		}
 	}
@@ -125,7 +119,7 @@ func CreateDomainConnector(domainType domain.DomainType) (any, error) {
 	case domain.DomainTypePGR:
 		pgr := NewPgrDomain()
 		return &pgr, nil
-	case domain.DomainTypeGoogleDocking:
+	case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
 		docking := NewGoogleDockingDomain()
 		return &docking, nil
 	default:
@@ -169,6 +163,8 @@ func DefaultDynamicPipelineConfig() DynamicPipelineConfig {
 
 // DynamicPipelineStep represents a single step in the pipeline
 type DynamicPipelineStep struct {
+	ID                  domain.ID
+	PipelineID          domain.ID
 	DomainType          domain.DomainType
 	SearchParameter     string
 	Category            domain.KeywordCategory
@@ -182,7 +178,7 @@ type DynamicPipelineStep struct {
 
 // DynamicPipelineResult represents the complete pipeline result
 type DynamicPipelineResult struct {
-	ID              string
+	ID              domain.ID
 	Steps           []DynamicPipelineStep
 	TotalSteps      int
 	SuccessfulSteps int
@@ -200,7 +196,7 @@ func CreateDynamicPipeline(
 
 	// Initialize the pipeline
 	pipeline := &DynamicPipelineResult{
-		ID:     domain.NewID().String(),
+		ID:     domain.NewID(),
 		Steps:  make([]DynamicPipelineStep, 0),
 		Config: config,
 	}
@@ -232,67 +228,6 @@ func CreateDynamicPipeline(
 			})
 		}
 	}
-
-	// Process the pipeline dynamically
-	currentStep := 0
-	for currentStep < len(pipeline.Steps) && currentStep < config.MaxDepth {
-		step := pipeline.Steps[currentStep]
-
-		// Skip if we've already processed this step
-		if step.Success || step.Error != nil {
-			currentStep++
-			continue
-		}
-
-		// Execute the step
-		result, err := SearchDomain(step.DomainType, domain.DomainSearchParams{Query: step.SearchParameter})
-		if err != nil {
-			step.Error = err
-			step.Success = false
-			pipeline.Steps[currentStep] = step
-			currentStep++
-			continue
-		}
-
-		// Update step with results
-		step.Success = result.Success
-		step.Output = result.Output
-		step.KeywordsPerCategory = result.KeywordsPerCategory
-		pipeline.Steps[currentStep] = step
-
-		// Generate new steps based on keywords
-		newSteps := generateStepsFromKeywords(
-			step.KeywordsPerCategory,
-			availableDomains,
-			searchedKeywordsPerDomain,
-			step.Depth+1,
-			config,
-		)
-
-		// Add new steps to pipeline
-		pipeline.Steps = append(pipeline.Steps, newSteps...)
-
-		currentStep++
-	}
-
-	// Calculate statistics
-	pipeline.TotalSteps = len(pipeline.Steps)
-	pipeline.SuccessfulSteps = 0
-	pipeline.FailedSteps = 0
-	maxDepth := 0
-
-	for _, step := range pipeline.Steps {
-		if step.Success {
-			pipeline.SuccessfulSteps++
-		} else {
-			pipeline.FailedSteps++
-		}
-		if step.Depth > maxDepth {
-			maxDepth = step.Depth
-		}
-	}
-
-	pipeline.MaxDepthReached = maxDepth
 
 	return pipeline, nil
 }

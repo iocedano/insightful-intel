@@ -1,6 +1,47 @@
 -- Database schema for Insightful Intel repositories
 -- This file contains all the necessary table definitions for the repository layer
 
+-- Dynamic pipeline results table
+CREATE TABLE IF NOT EXISTS  dynamic_pipeline_results (
+    id CHAR(36) PRIMARY KEY,
+    total_steps INT DEFAULT 0,
+    successful_steps INT DEFAULT 0,
+    failed_steps INT DEFAULT 0,
+    max_depth_reached INT DEFAULT 0,
+    config JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_total_steps (total_steps),
+    INDEX idx_successful_steps (successful_steps),
+    INDEX idx_failed_steps (failed_steps),
+    INDEX idx_max_depth (max_depth_reached),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dynamic pipeline steps table
+CREATE TABLE IF NOT EXISTS  dynamic_pipeline_steps  (
+    id CHAR(36) PRIMARY KEY,
+    pipeline_id CHAR(36) NOT NULL,
+    domain_type VARCHAR(50) NOT NULL,
+    search_parameter VARCHAR(255),
+    category VARCHAR(50),
+    keywords JSON,
+    success BOOLEAN DEFAULT FALSE,
+    error_message TEXT,
+    output JSON,
+    keywords_per_category JSON,
+    depth INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (pipeline_id) REFERENCES dynamic_pipeline_results(id) ON DELETE CASCADE,
+    INDEX idx_pipeline_id (pipeline_id),
+    INDEX idx_domain_type (domain_type),
+    INDEX idx_category (category),
+    INDEX idx_success (success),
+    INDEX idx_depth (depth),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Domain search results table (must be created first as it's referenced by other tables)
 CREATE TABLE IF NOT EXISTS  domain_search_results (
     id CHAR(36) PRIMARY KEY,
@@ -12,10 +53,13 @@ CREATE TABLE IF NOT EXISTS  domain_search_results (
     output JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    pipeline_steps_id CHAR(36),
+    FOREIGN KEY (pipeline_steps_id) REFERENCES dynamic_pipeline_steps(id) ON DELETE CASCADE,
     INDEX idx_domain_type (domain_type),
     INDEX idx_success (success),
     INDEX idx_search_parameter (search_parameter),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_pipeline_steps_id (pipeline_steps_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ONAPI entities table
@@ -81,7 +125,6 @@ CREATE TABLE IF NOT EXISTS scj_cases (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (domain_search_result_id) REFERENCES domain_search_results(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_expediente (id_expediente),
     INDEX idx_domain_search_result_id (domain_search_result_id),
     INDEX idx_no_expediente (no_expediente),
     INDEX idx_no_sentencia (no_sentencia),
@@ -94,7 +137,7 @@ CREATE TABLE IF NOT EXISTS scj_cases (
 CREATE TABLE IF NOT EXISTS  dgii_registers (
     id CHAR(36) PRIMARY KEY,
     domain_search_result_id CHAR(36),
-    rnc VARCHAR(20) NOT NULL UNIQUE,
+    rnc VARCHAR(20) NOT NULL,
     razon_social VARCHAR(255),
     nombre_comercial VARCHAR(255),
     categoria VARCHAR(100),
@@ -122,7 +165,6 @@ CREATE TABLE IF NOT EXISTS  pgr_news (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (domain_search_result_id) REFERENCES domain_search_results(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_url (url(255)),
     INDEX idx_domain_search_result_id (domain_search_result_id),
     INDEX idx_title (title(100))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -131,6 +173,7 @@ CREATE TABLE IF NOT EXISTS  pgr_news (
 CREATE TABLE IF NOT EXISTS  google_docking_results (
     id CHAR(36) PRIMARY KEY,
     domain_search_result_id CHAR(36),
+    search_parameter VARCHAR(255),
     url TEXT NOT NULL,
     title TEXT,
     description TEXT,
@@ -147,43 +190,3 @@ CREATE TABLE IF NOT EXISTS  google_docking_results (
     INDEX idx_rank (search_rank)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dynamic pipeline results table
-CREATE TABLE IF NOT EXISTS  dynamic_pipeline_results (
-    id CHAR(36) PRIMARY KEY,
-    total_steps INT DEFAULT 0,
-    successful_steps INT DEFAULT 0,
-    failed_steps INT DEFAULT 0,
-    max_depth_reached INT DEFAULT 0,
-    config JSON,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_total_steps (total_steps),
-    INDEX idx_successful_steps (successful_steps),
-    INDEX idx_failed_steps (failed_steps),
-    INDEX idx_max_depth (max_depth_reached),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Dynamic pipeline steps table
-CREATE TABLE IF NOT EXISTS  dynamic_pipeline_steps  (
-    id CHAR(36) PRIMARY KEY,
-    pipeline_id CHAR(36) NOT NULL,
-    domain_type VARCHAR(50) NOT NULL,
-    search_parameter VARCHAR(255),
-    category VARCHAR(50),
-    keywords JSON,
-    success BOOLEAN DEFAULT FALSE,
-    error_message TEXT,
-    output JSON,
-    keywords_per_category JSON,
-    depth INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (pipeline_id) REFERENCES dynamic_pipeline_results(id) ON DELETE CASCADE,
-    INDEX idx_pipeline_id (pipeline_id),
-    INDEX idx_domain_type (domain_type),
-    INDEX idx_category (category),
-    INDEX idx_success (success),
-    INDEX idx_depth (depth),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

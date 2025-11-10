@@ -10,6 +10,8 @@ const (
 	KeywordCategoryContributorID KeywordCategory = "contributor_id"
 	KeywordCategoryPersonName    KeywordCategory = "person_name"
 	KeywordCategorySocialMedia   KeywordCategory = "social_media"
+	KeywordCategoryFileType      KeywordCategory = "file_type"
+	KeywordCategoryXSocialMedia  KeywordCategory = "x_social_media"
 )
 
 // DomainConnector is an interface for domain-specific connectors that can process,
@@ -75,6 +77,9 @@ const (
 	DomainTypeDGII          DomainType = "DGII"
 	DomainTypePGR           DomainType = "PGR"
 	DomainTypeGoogleDocking DomainType = "GOOGLE_DOCKING"
+	DomainTypeSocialMedia   DomainType = "SOCIAL_MEDIA"
+	DomainTypeXSocialMedia  DomainType = "X_SOCIAL_MEDIA"
+	DomainTypeFileType      DomainType = "FILE_TYPE"
 )
 
 // AllDomainTypes returns a list of all available domain types (excluding ERROR)
@@ -85,6 +90,9 @@ func AllDomainTypes() []DomainType {
 		DomainTypeDGII,
 		DomainTypePGR,
 		DomainTypeGoogleDocking,
+		DomainTypeSocialMedia,
+		DomainTypeXSocialMedia,
+		DomainTypeFileType,
 	}
 }
 
@@ -99,11 +107,14 @@ func DefaultDomainTypes() []DomainType {
 
 // StringToDomainType maps string identifiers (typically from URL parameters) to DomainType
 var StringToDomainType = map[string]DomainType{
-	"onapi":   DomainTypeONAPI,
-	"scj":     DomainTypeSCJ,
-	"dgii":    DomainTypeDGII,
-	"pgr":     DomainTypePGR,
-	"docking": DomainTypeGoogleDocking,
+	"onapi":          DomainTypeONAPI,
+	"scj":            DomainTypeSCJ,
+	"dgii":           DomainTypeDGII,
+	"pgr":            DomainTypePGR,
+	"docking":        DomainTypeGoogleDocking,
+	"social_media":   DomainTypeSocialMedia,
+	"x_social_media": DomainTypeXSocialMedia,
+	"file_type":      DomainTypeFileType,
 }
 
 // DomainTypeToString maps DomainType to string identifiers (for URL parameters)
@@ -113,6 +124,9 @@ var DomainTypeToString = map[DomainType]string{
 	DomainTypeDGII:          "dgii",
 	DomainTypePGR:           "pgr",
 	DomainTypeGoogleDocking: "docking",
+	DomainTypeSocialMedia:   "social_media",
+	DomainTypeXSocialMedia:  "x_social_media",
+	DomainTypeFileType:      "file_type",
 }
 
 // GetDomainTypeFromString converts a string to DomainType, returns error if not found
@@ -136,17 +150,12 @@ func IsValidDomainType(dt DomainType) bool {
 // DomainSearchParams holds the search parameters for different domains
 type DomainSearchParams struct {
 	Query string
-	// Add more specific parameters as needed for different domains
-	// For example:
-	// PageSize int
-	// PageIdx  int
-	// Tipo     string
-	// Subtipo  string
 }
 
 // DomainSearchResult represents the result of a domain search
 type DomainSearchResult struct {
 	ID                  ID
+	PipelineStepsID     ID
 	DomainType          DomainType
 	SearchParameter     string
 	KeywordsPerCategory map[KeywordCategory][]string `json:"keywordsPerCategory"`

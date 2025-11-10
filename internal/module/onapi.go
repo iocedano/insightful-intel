@@ -47,7 +47,7 @@ func (*Onapi) GetDomainType() domain.DomainType {
 }
 
 // onapi endpoint
-func NewOnapiDomain() Onapi {
+func NewOnapiDomain() domain.DomainConnector[domain.Entity] {
 	pm := stuff.PathMap{
 		BaseURL: "https://www.onapi.gob.do/busqapi/signos/",
 		Paths: map[string]string{
@@ -56,7 +56,7 @@ func NewOnapiDomain() Onapi {
 		},
 	}
 
-	return Onapi{
+	return &Onapi{
 		BaseParh: "https://www.onapi.gob.do/busqapi/signos/",
 		Stuff:    *stuff.NewStuff(),
 		PathMap:  pm,

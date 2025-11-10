@@ -32,14 +32,14 @@ func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, 
 
 	query := `
 		INSERT INTO google_docking_results (
-			id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+			id, domain_search_result_id, search_parameter, url, title, description, relevance, search_rank, keywords, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
 	keywordsJSON, _ := json.Marshal(entity.Keywords)
 
 	_, err := r.db.ExecContext(ctx, query,
-		entity.ID, entity.DomainSearchResultID, entity.URL, entity.Title, entity.Description, entity.Relevance, entity.Rank, keywordsJSON,
+		entity.ID, entity.DomainSearchResultID, entity.SearchParameter, entity.URL, entity.Title, entity.Description, entity.Relevance, entity.Rank, keywordsJSON,
 	)
 
 	return err
@@ -272,16 +272,16 @@ func (r *DockingRepository) GetBySearchParameter(ctx context.Context, searchPara
 
 // GetKeywordsByCategory retrieves keywords grouped by category for a Google Docking result
 func (r *DockingRepository) GetKeywordsByCategory(ctx context.Context, entityID string) (map[domain.KeywordCategory][]string, error) {
-	entity, err := r.GetByID(ctx, entityID)
-	if err != nil {
-		return nil, err
-	}
+	// entity, err := r.GetByID(ctx, entityID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	docking := domain.NewGoogleDockingDomain()
+	// docking := domain.NewGoogleDockingDomain()
 	return map[domain.KeywordCategory][]string{
 		// domain.KeywordCategoryCompanyName: docking.GetDataByCategory(entity, domain.KeywordCategoryCompanyName),
 		// domain.KeywordCategoryPersonName:  docking.GetDataByCategory(entity, domain.KeywordCategoryPersonName),
 		// domain.KeywordCategoryAddress:     docking.GetDataByCategory(entity, domain.KeywordCategoryAddress),
-		domain.KeywordCategorySocialMedia: docking.GetDataByCategory(entity, domain.KeywordCategorySocialMedia),
+		// domain.KeywordCategorySocialMedia: docking.GetDataByCategory(entity, domain.KeywordCategorySocialMedia),
 	}, nil
 }

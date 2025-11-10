@@ -7,6 +7,8 @@ import (
 	"insightful-intel/internal/database"
 	"insightful-intel/internal/domain"
 	"insightful-intel/internal/module"
+
+	"github.com/google/uuid"
 )
 
 // PipelineRepository implements PipelineResultRepository for pipeline results
@@ -28,8 +30,8 @@ func (r *PipelineRepository) CreateDomainSearchResult(ctx context.Context, resul
 
 	query := `
 		INSERT INTO domain_search_results (
-			id, success, error_message, domain_type, search_parameter, keywords_per_category, output, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+			id, success, error_message, domain_type, search_parameter, keywords_per_category, output, pipeline_steps_id, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
 	keywordsJSON, _ := json.Marshal(result.KeywordsPerCategory)
@@ -41,7 +43,7 @@ func (r *PipelineRepository) CreateDomainSearchResult(ctx context.Context, resul
 	}
 
 	_, err := r.db.ExecContext(ctx, query,
-		result.ID, result.Success, errorMessage, string(result.DomainType), result.SearchParameter, keywordsJSON, outputJSON,
+		result.ID, result.Success, errorMessage, string(result.DomainType), result.SearchParameter, keywordsJSON, outputJSON, result.PipelineStepsID,
 	)
 	if err != nil {
 		return nil, err
@@ -52,6 +54,10 @@ func (r *PipelineRepository) CreateDomainSearchResult(ctx context.Context, resul
 
 // createDynamicPipelineResult inserts a DynamicPipelineResult
 func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) (*module.DynamicPipelineResult, error) {
+	if result.ID == domain.ID(uuid.Nil) {
+		result.ID = domain.NewID()
+	}
+
 	query := `
 		INSERT INTO dynamic_pipeline_results (
 			id, total_steps, successful_steps, failed_steps, max_depth_reached, config, created_at, updated_at
@@ -67,41 +73,43 @@ func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, re
 		return nil, err
 	}
 
-	// Get the generated UUID
-	err = r.insertPipelineSteps(ctx, result.ID, result.Steps)
-	if err != nil {
-		return nil, err
-	}
+	// // Get the generated UUID
+	// err = r.CreateDynamicPipelineSteps(ctx, result.ID.String(), result.Steps)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	return result, nil
 }
 
-// insertPipelineSteps inserts individual pipeline steps
-func (r *PipelineRepository) insertPipelineSteps(ctx context.Context, pipelineID string, steps []module.DynamicPipelineStep) error {
+// CreateDynamicPipelineSteps inserts individual pipeline steps
+func (r *PipelineRepository) CreateDynamicPipelineStep(ctx context.Context, step *module.DynamicPipelineStep) error {
+	if step.ID == domain.ID(uuid.Nil) {
+		step.ID = domain.NewID()
+	}
+
 	query := `
 		INSERT INTO dynamic_pipeline_steps (
 			id, pipeline_id, domain_type, search_parameter, category, keywords, success, error_message, 
 			output, keywords_per_category, depth, created_at, updated_at
-		) VALUES (UUID(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 
-	for _, step := range steps {
-		keywordsJSON, _ := json.Marshal(step.Keywords)
-		outputJSON, _ := json.Marshal(step.Output)
-		keywordsPerCategoryJSON, _ := json.Marshal(step.KeywordsPerCategory)
+	keywordsJSON, _ := json.Marshal(step.Keywords)
+	outputJSON, _ := json.Marshal(step.Output)
+	keywordsPerCategoryJSON, _ := json.Marshal(step.KeywordsPerCategory)
 
-		var errorMessage string
-		if step.Error != nil {
-			errorMessage = step.Error.Error()
-		}
+	var errorMessage string
+	if step.Error != nil {
+		errorMessage = step.Error.Error()
+	}
 
-		_, err := r.db.ExecContext(ctx, query,
-			pipelineID, string(step.DomainType), step.SearchParameter, string(step.Category),
-			keywordsJSON, step.Success, errorMessage, outputJSON, keywordsPerCategoryJSON, step.Depth,
-		)
-		if err != nil {
-			return err
-		}
+	_, err := r.db.ExecContext(ctx, query,
+		step.ID, step.PipelineID, string(step.DomainType), step.SearchParameter, string(step.Category),
+		keywordsJSON, step.Success, errorMessage, outputJSON, keywordsPerCategoryJSON, step.Depth,
+	)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -232,16 +240,16 @@ func (r *PipelineRepository) getPipelineSteps(ctx context.Context, pipelineID st
 func (r *PipelineRepository) Update(ctx context.Context, id string, entity any) error {
 	switch v := entity.(type) {
 	case *domain.DomainSearchResult:
-		return r.updateDomainSearchResult(ctx, id, v)
+		return r.updateDomainSearchResult(ctx, v)
 	case *module.DynamicPipelineResult:
-		return r.updateDynamicPipelineResult(ctx, id, v)
+		return r.UpdateDynamicPipelineResult(ctx, v)
 	default:
 		return fmt.Errorf("unsupported pipeline result type: %T", entity)
 	}
 }
 
 // updateDomainSearchResult updates a DomainSearchResult
-func (r *PipelineRepository) updateDomainSearchResult(ctx context.Context, id string, result *domain.DomainSearchResult) error {
+func (r *PipelineRepository) updateDomainSearchResult(ctx context.Context, result *domain.DomainSearchResult) error {
 	query := `
 		UPDATE domain_search_results SET
 			success = ?, error_message = ?, domain_type = ?, search_parameter = ?, 
@@ -259,14 +267,14 @@ func (r *PipelineRepository) updateDomainSearchResult(ctx context.Context, id st
 
 	_, err := r.db.ExecContext(ctx, query,
 		result.Success, errorMessage, string(result.DomainType), result.SearchParameter,
-		keywordsJSON, outputJSON, id,
+		keywordsJSON, outputJSON, result.ID,
 	)
 
 	return err
 }
 
 // updateDynamicPipelineResult updates a DynamicPipelineResult
-func (r *PipelineRepository) updateDynamicPipelineResult(ctx context.Context, id string, result *module.DynamicPipelineResult) error {
+func (r *PipelineRepository) UpdateDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) error {
 	query := `
 		UPDATE dynamic_pipeline_results SET
 			total_steps = ?, successful_steps = ?, failed_steps = ?, max_depth_reached = ?, 
@@ -278,20 +286,13 @@ func (r *PipelineRepository) updateDynamicPipelineResult(ctx context.Context, id
 
 	_, err := r.db.ExecContext(ctx, query,
 		result.TotalSteps, result.SuccessfulSteps, result.FailedSteps, result.MaxDepthReached,
-		configJSON, id,
+		configJSON, result.ID,
 	)
 	if err != nil {
 		return err
 	}
 
-	// Delete existing steps and insert new ones
-	deleteQuery := `DELETE FROM dynamic_pipeline_steps WHERE pipeline_id = ?`
-	_, err = r.db.ExecContext(ctx, deleteQuery, id)
-	if err != nil {
-		return err
-	}
-
-	return r.insertPipelineSteps(ctx, id, result.Steps)
+	return nil
 }
 
 // Delete removes a pipeline result by its ID

@@ -89,8 +89,8 @@ func (dgi *Dgii) GetFoundKeywordCategories() []domain.KeywordCategory {
 	}
 }
 
-func NewDgiiDomain() Dgii {
-	return Dgii{
+func NewDgiiDomain() domain.DomainConnector[domain.Register] {
+	return &Dgii{
 		BaseParh: "https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx",
 		Stuff:    *stuff.NewStuff(),
 	}

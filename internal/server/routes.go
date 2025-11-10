@@ -656,7 +656,7 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create Google Docking connector
-	googleDocking := domain.NewGoogleDockingDomain()
+	googleDocking := module.NewGoogleDockingDomain()
 
 	// Create search parameters
 	params := domain.GoogleDockingSearchParams{
@@ -717,7 +717,7 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	googleDocking := domain.NewGoogleDockingDomain()
+	googleDocking := module.NewGoogleDockingDomain()
 	suggestions, err := googleDocking.GetSearchSuggestions(query)
 	if err != nil {
 		http.Error(w, "Failed to get suggestions: "+err.Error(), http.StatusInternalServerError)
@@ -755,7 +755,7 @@ func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	googleDocking := domain.NewGoogleDockingDomain()
+	googleDocking := module.NewGoogleDockingDomain()
 	stats := googleDocking.GetSearchStatistics(request.Results)
 
 	response := map[string]interface{}{

@@ -11,22 +11,11 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gocolly/colly"
 )
 
 var _ domain.DomainConnector[domain.GoogleDockingResult] = &GoogleDocking{}
-
-var FRAUD_KEYWORDS = []string{
-	"fraude",
-	"estafa",
-	"denuncia",
-	"engaño",
-	"irregular",
-	"contrato",
-	"pagos",
-	"retrasos",
-	"robo",
-}
 
 // GoogleDocking represents a Google Docking string search connector
 type GoogleDocking struct {
@@ -105,6 +94,24 @@ func (b *GoogleDockingBuilder) IncludeKeywords(keywords ...string) *GoogleDockin
 	return b
 }
 
+// FileTypeKeywords adds file type keywords
+func (b *GoogleDockingBuilder) FileTypeKeywords(keywords ...string) *GoogleDockingBuilder {
+	b.params.FileTypeKeywords = append(b.params.FileTypeKeywords, keywords...)
+	return b
+}
+
+// SitesKeywords adds sites keywords
+func (b *GoogleDockingBuilder) SitesKeywords(keywords ...string) *GoogleDockingBuilder {
+	b.params.SitesKeywords = append(b.params.SitesKeywords, keywords...)
+	return b
+}
+
+// InURLKeywords adds keywords to the URL
+func (b *GoogleDockingBuilder) InURLKeywords(keywords ...string) *GoogleDockingBuilder {
+	b.params.InURLKeywords = append(b.params.InURLKeywords, keywords...)
+	return b
+}
+
 // ExcludeKeywords adds keywords to exclude
 func (b *GoogleDockingBuilder) ExcludeKeywords(keywords ...string) *GoogleDockingBuilder {
 	b.params.ExcludeKeywords = append(b.params.ExcludeKeywords, keywords...)
@@ -153,17 +160,41 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 		return nil, fmt.Errorf("query cannot be empty")
 	}
 
-	///
-	q := params.Query
+	var q string
 
 	if len(params.IncludeKeywords) > 0 {
-		quotedElements := make([]string, len(params.IncludeKeywords))
-		for i, s := range params.IncludeKeywords {
-			quotedElements[i] = s // Add double quotes to each element
+		result := strings.Join(params.IncludeKeywords, " OR ")
+
+		q = fmt.Sprintf("%s intext:(%s)", q, result)
+	}
+
+	if len(params.FileTypeKeywords) > 0 {
+		quotedElements := make([]string, len(params.FileTypeKeywords))
+		for i, s := range params.FileTypeKeywords {
+			quotedElements[i] = "filetype:" + s // Add double quotes to each element
 		}
 		result := strings.Join(quotedElements, " OR ")
 
-		q = fmt.Sprintf("%s intext:%s", q, result)
+		q = fmt.Sprintf("%s (%s)", q, result)
+	}
+	if len(params.SitesKeywords) > 0 {
+		quotedElements := make([]string, len(params.SitesKeywords))
+		for i, s := range params.SitesKeywords {
+			quotedElements[i] = "site:" + s // Add double quotes to each element
+		}
+		result := strings.Join(quotedElements, " OR ")
+
+		q = fmt.Sprintf("%s %s", q, result)
+	}
+
+	if len(params.InURLKeywords) > 0 {
+		quotedElements := make([]string, len(params.InURLKeywords))
+		for i, s := range params.InURLKeywords {
+			quotedElements[i] = "inurl:" + s // Add double quotes to each element
+		}
+		result := strings.Join(quotedElements, " OR ")
+
+		q = fmt.Sprintf("%s (%s)", q, result)
 	}
 
 	if len(params.ExcludeKeywords) > 0 {
@@ -175,6 +206,10 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 
 		q = fmt.Sprintf("%s intext:(%s)", q, result)
 	}
+
+	q = fmt.Sprintf("%s %s", params.Query, q)
+
+	spew.Dump("SearchWithParams::: q", params.Query, "q", q)
 
 	URL, err := url.Parse(gd.BasePath)
 	if err != nil {
@@ -191,9 +226,16 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 	c.OnHTML("#links div.result", func(e *colly.HTMLElement) {
 		article := domain.GoogleDockingResult{}
 
-		article.URL = e.ChildAttr("a.result__a", "href")
-		article.Title = e.ChildText("a.result__a")
+		article.URL = extractURLFromQuery(e.ChildAttr(".result__body a.result__a", "href"))
+		article.Title = e.ChildText(".result__body a.result__a")
 		article.Description = e.ChildText("a.result__snippet")
+		article.SearchParameter = q
+		article.Keywords = append(article.Keywords, params.IncludeKeywords...)
+		article.Keywords = append(article.Keywords, params.ExcludeKeywords...)
+		article.Keywords = append(article.Keywords, params.FileTypeKeywords...)
+		article.Keywords = append(article.Keywords, params.SitesKeywords...)
+		article.Relevance = 1.0
+		article.Rank = len(news) + 1
 
 		news = append(news, article)
 
@@ -207,17 +249,19 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 
 	c.Visit(fmt.Sprintf("%s?q=%s", gd.BasePath, url.QueryEscape(q)))
 
-	c.Wait() // Wait for all requests to complete
-
-	// Simulate Google search results (in a real implementation, this would call Google's API)
-
-	// // Apply string matching and ranking
-	// rankedResults := gd.rankResults(results, params)
-
-	// // Filter by minimum relevance
-	// filteredResults := gd.filterByRelevance(rankedResults, params.MinRelevance)
+	c.Wait()
 
 	return news, nil
+}
+
+func extractURLFromQuery(URL string) string {
+	URL = strings.Replace(URL, "//duckduckgo.com/l/?uddg=", "", 1)
+	URL = strings.Split(URL, "&rut=")[0]
+	urlParsed, err := url.QueryUnescape(URL)
+	if err != nil {
+		return ""
+	}
+	return urlParsed
 }
 
 // generateMockResults generates mock search results for demonstration
@@ -651,7 +695,7 @@ func (gd *GoogleDocking) extractSocialMedia(data domain.GoogleDockingResult) []s
 	social := []string{}
 	text := data.Title + " " + data.Description + " " + data.URL
 
-	// Look for social media patterns
+	// Loo	 for social media patterns
 	socialPatterns := []string{"@", "twitter.com", "facebook.com", "instagram.com", "linkedin.com", "youtube.com"}
 
 	for _, pattern := range socialPatterns {
@@ -668,8 +712,6 @@ func (gd *GoogleDocking) GetSearchableKeywordCategories() []domain.KeywordCatego
 	return []domain.KeywordCategory{
 		domain.KeywordCategoryCompanyName,
 		domain.KeywordCategoryPersonName,
-		domain.KeywordCategoryAddress,
-		domain.KeywordCategorySocialMedia,
 	}
 }
 
