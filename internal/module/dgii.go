@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/stuff"
+	"insightful-intel/internal/custom"
 	"io"
 	"net/url"
 	"strings"
@@ -15,9 +15,9 @@ import (
 var _ domain.DomainConnector[domain.Register] = &Dgii{}
 
 type Dgii struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BaseParh string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 func (*Dgii) GetDomainType() domain.DomainType {
@@ -92,7 +92,7 @@ func (dgi *Dgii) GetFoundKeywordCategories() []domain.KeywordCategory {
 func NewDgiiDomain() domain.DomainConnector[domain.Register] {
 	return &Dgii{
 		BaseParh: "https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx",
-		Stuff:    *stuff.NewStuff(),
+		Stuff:    *custom.NewClient(),
 	}
 }
 
@@ -102,7 +102,9 @@ func (dgi *Dgii) Search(query string) ([]domain.Register, error) {
 }
 
 func (dgi *Dgii) GetRegister(query string) ([]domain.Register, error) {
-	response, err := dgi.Stuff.Client.Get(dgi.BaseParh, nil, map[string]string{
+	response, err := dgi.Stuff.Get(dgi.BaseParh, map[string]string{
+		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+	}, map[string]string{
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
 	})
 	if err != nil {
@@ -154,10 +156,11 @@ func (dgi *Dgii) GetRegister(query string) ([]domain.Register, error) {
 		formData.Set(key, value)
 	}
 
-	resp, err := dgi.Stuff.Client.Post(dgi.BaseParh, formData.Encode(), map[string]string{
-		"Content-Type": "application/x-www-form-urlencoded",
-		"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-	})
+	resp, err := dgi.Stuff.Post(dgi.BaseParh, formData.Encode(), map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+			"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make post request: %w", err)
 	}

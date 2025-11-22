@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"insightful-intel/internal/stuff"
+	"insightful-intel/internal/custom"
 	"time"
 )
 
@@ -62,16 +62,16 @@ var FILE_TYPE_KEYWORDS = []string{
 
 // GoogleDocking represents a Google Docking string search connector
 type GoogleDocking struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BasePath string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 // NewGoogleDockingDomain creates a new Google Docking domain instance
 func NewGoogleDockingDomain() GoogleDocking {
 	return GoogleDocking{
 		BasePath: "https://html.duckduckgo.com/html/",
-		Stuff:    *stuff.NewStuff(),
+		Stuff:    *custom.NewClient(),
 	}
 }
 
@@ -79,15 +79,15 @@ func NewGoogleDockingDomain() GoogleDocking {
 type GoogleDockingResult struct {
 	ID                   ID        `json:"id"`
 	DomainSearchResultID ID        `json:"domainSearchResultId"`
-	SearchParameter      string    `json:"searchParameter"`
-	URL                  string    `json:"url"`
+	SearchParameter      string    `json:"searchParameter" omitempty`
+	URL                  string    `json:"link"`
 	Title                string    `json:"title"`
-	Description          string    `json:"description"`
-	Relevance            float64   `json:"relevance"`
-	Rank                 int       `json:"rank"`
-	Keywords             []string  `json:"keywords"`
-	CreatedAt            time.Time `json:"createdAt"`
-	UpdatedAt            time.Time `json:"updatedAt"`
+	Description          string    `json:"snippet"`
+	Relevance            float64   `json:"relevance" omitempty`
+	Rank                 int       `json:"rank" omitempty`
+	Keywords             []string  `json:"keywords" omitempty`
+	CreatedAt            time.Time `json:"createdAt" omitempty`
+	UpdatedAt            time.Time `json:"updatedAt" omitempty`
 }
 
 // GoogleDockingSearchParams holds parameters for Google Docking search

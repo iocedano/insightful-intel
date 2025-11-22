@@ -1,4 +1,4 @@
-package stuff
+package custom
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type CustomClient struct {
+type Client struct {
 	RequestParams RequestParams
 	Client        *http.Client
 }
@@ -25,15 +25,15 @@ type RequestParams struct {
 	Timeout  time.Duration
 }
 
-func NewCustomClient() *CustomClient {
-	return &CustomClient{
+func NewClient() *Client {
+	return &Client{
 		Client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
 }
 
-func (s *CustomClient) Do() (*http.Response, error) {
+func (s *Client) Do() (*http.Response, error) {
 	if s.RequestParams.Endpoint == "" {
 		return nil, fmt.Errorf("endpoint is required")
 	}
@@ -84,7 +84,7 @@ func (s *CustomClient) Do() (*http.Response, error) {
 }
 
 // Helper methods for common HTTP operations
-func (s *CustomClient) Get(endpoint string, params map[string]string, headers map[string]string) (*http.Response, error) {
+func (s *Client) Get(endpoint string, params map[string]string, headers map[string]string) (*http.Response, error) {
 	s.RequestParams = RequestParams{
 		Method:   "GET",
 		Endpoint: endpoint,
@@ -94,7 +94,7 @@ func (s *CustomClient) Get(endpoint string, params map[string]string, headers ma
 	return s.Do()
 }
 
-func (s *CustomClient) Post(endpoint string, body string, headers map[string]string) (*http.Response, error) {
+func (s *Client) Post(endpoint string, body string, headers map[string]string) (*http.Response, error) {
 	s.RequestParams = RequestParams{
 		Method:   "POST",
 		Endpoint: endpoint,
@@ -104,7 +104,7 @@ func (s *CustomClient) Post(endpoint string, body string, headers map[string]str
 	return s.Do()
 }
 
-func (s *CustomClient) Put(endpoint string, body string, headers map[string]string) (*http.Response, error) {
+func (s *Client) Put(endpoint string, body string, headers map[string]string) (*http.Response, error) {
 	s.RequestParams = RequestParams{
 		Method:   "PUT",
 		Endpoint: endpoint,
@@ -114,7 +114,7 @@ func (s *CustomClient) Put(endpoint string, body string, headers map[string]stri
 	return s.Do()
 }
 
-func (s *CustomClient) Delete(endpoint string, headers map[string]string) (*http.Response, error) {
+func (s *Client) Delete(endpoint string, headers map[string]string) (*http.Response, error) {
 	s.RequestParams = RequestParams{
 		Method:   "DELETE",
 		Endpoint: endpoint,
@@ -124,7 +124,7 @@ func (s *CustomClient) Delete(endpoint string, headers map[string]string) (*http
 }
 
 // JSON helper methods
-func (s *CustomClient) PostJSON(endpoint string, data interface{}, headers map[string]string) (*http.Response, error) {
+func (s *Client) PostJSON(endpoint string, data interface{}, headers map[string]string) (*http.Response, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
@@ -138,7 +138,7 @@ func (s *CustomClient) PostJSON(endpoint string, data interface{}, headers map[s
 	return s.Post(endpoint, string(jsonData), headers)
 }
 
-func (s *CustomClient) PutJSON(endpoint string, data interface{}, headers map[string]string) (*http.Response, error) {
+func (s *Client) PutJSON(endpoint string, data interface{}, headers map[string]string) (*http.Response, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
@@ -153,11 +153,11 @@ func (s *CustomClient) PutJSON(endpoint string, data interface{}, headers map[st
 }
 
 // Set timeout for the client
-func (s *CustomClient) SetTimeout(timeout time.Duration) {
+func (s *Client) SetTimeout(timeout time.Duration) {
 	s.Client.Timeout = timeout
 }
 
 // Set custom HTTP client
-func (s *CustomClient) SetClient(client *http.Client) {
+func (s *Client) SetClient(client *http.Client) {
 	s.Client = client
 }

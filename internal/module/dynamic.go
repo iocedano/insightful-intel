@@ -1,8 +1,10 @@
 package module
 
 import (
+	"context"
 	"fmt"
 	"insightful-intel/internal/domain"
+	"insightful-intel/internal/infra"
 )
 
 // SearchDomain performs a search using the specified domain type and parameters
@@ -189,14 +191,22 @@ type DynamicPipelineResult struct {
 
 // CreateDynamicPipeline creates a dynamic pipeline based on searchable categories
 func CreateDynamicPipeline(
+	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
 	config DynamicPipelineConfig,
 ) (*DynamicPipelineResult, error) {
+	pipelineID := domain.NewID()
+
+	executionID, _ := infra.GetExecutionID(ctx)
+
+	if executionID != "" {
+		pipelineID = domain.NewIDFromString(executionID)
+	}
 
 	// Initialize the pipeline
 	pipeline := &DynamicPipelineResult{
-		ID:     domain.NewID(),
+		ID:     pipelineID,
 		Steps:  make([]DynamicPipelineStep, 0),
 		Config: config,
 	}
@@ -322,13 +332,14 @@ func contains(slice []domain.KeywordCategory, item domain.KeywordCategory) bool 
 
 // ExecuteDynamicPipeline executes the dynamic pipeline with parallel processing
 func ExecuteDynamicPipeline(
+	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
 	config DynamicPipelineConfig,
 ) (*DynamicPipelineResult, error) {
 
 	// Create the pipeline structure
-	pipeline, err := CreateDynamicPipeline(initialQuery, availableDomains, config)
+	pipeline, err := CreateDynamicPipeline(ctx, initialQuery, availableDomains, config)
 	if err != nil {
 		return nil, err
 	}

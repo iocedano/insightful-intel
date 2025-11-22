@@ -365,3 +365,54 @@ func (s *Server) savePipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Error(w, "Unsupported pipeline result format", http.StatusBadRequest)
 }
+
+// pipelineStepsHandler handles retrieving steps for a pipeline result
+func (s *Server) pipelineStepsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get pipeline ID from query parameters
+	pipelineID := r.URL.Query().Get("pipeline_id")
+	if pipelineID == "" {
+		http.Error(w, "Query parameter 'pipeline_id' is required", http.StatusBadRequest)
+		return
+	}
+
+	repos := s.GetRepositories()
+	pipelineRepo := repos.GetPipelineRepository()
+
+	// Get the pipeline result by ID
+	result, err := pipelineRepo.GetByID(r.Context(), pipelineID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to get pipeline result: %v", err), http.StatusNotFound)
+		return
+	}
+
+	// Extract steps based on result type
+	var steps []interface{}
+	switch v := result.(type) {
+	case *module.DynamicPipelineResult:
+		// Convert DynamicPipelineStep to interface{} for JSON marshaling
+		steps = make([]interface{}, len(v.Steps))
+		for i, step := range v.Steps {
+			steps[i] = step
+		}
+	case *domain.DomainSearchResult:
+		// For DomainSearchResult, we can return it as a single "step"
+		// or return an empty array if steps aren't applicable
+		steps = []interface{}{}
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported pipeline result type: %T", result), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":     true,
+		"pipeline_id": pipelineID,
+		"steps":       steps,
+		"count":       len(steps),
+	})
+}

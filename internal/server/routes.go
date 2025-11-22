@@ -1,9 +1,11 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"insightful-intel/internal/domain"
+	"insightful-intel/internal/infra"
 	"insightful-intel/internal/module"
 	"log"
 	"net/http"
@@ -11,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -29,6 +33,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux.HandleFunc("/api/pgr", s.pgrHandler)
 	mux.HandleFunc("/api/docking", s.dockingHandler)
 	mux.HandleFunc("/api/pipeline", s.pipelineHandler)
+	mux.HandleFunc("/api/pipeline/steps", s.pipelineStepsHandler)
 	mux.HandleFunc("/api/pipeline/save", s.savePipelineHandler)
 
 	// Wrap the mux with CORS middleware
@@ -55,12 +60,12 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 }
 
 type ConnectorPipeline struct {
-	Success             bool
-	Error               error
-	Name                string
-	SearchParameter     string
-	keywordsPerCategory map[domain.KeywordCategory][]string
-	Output              any
+	Success             bool                                `json:"success"`
+	Error               error                               `json:"error"`
+	Name                string                              `json:"name"`
+	SearchParameter     string                              `json:"search_parameter"`
+	Output              any                                 `json:"output"`
+	KeywordsPerCategory map[domain.KeywordCategory][]string `json:"keywords_per_category"`
 }
 
 // Step executes a single step in the pipeline for a specific domain connector
@@ -100,7 +105,7 @@ func Step[T any](
 			Name:                string(result.DomainType),
 			SearchParameter:     result.SearchParameter,
 			Output:              result.Output,
-			keywordsPerCategory: result.KeywordsPerCategory,
+			KeywordsPerCategory: result.KeywordsPerCategory,
 		})
 
 		seachedKeywordsPerDomain[domainType] = append(seachedKeywordsPerDomain[domainType], keyword)
@@ -114,14 +119,16 @@ func convertDynamicPipelineToConnectorPipeline(dynamicResult *module.DynamicPipe
 	pipeline := make([]ConnectorPipeline, 0, len(dynamicResult.Steps))
 
 	for _, step := range dynamicResult.Steps {
-		pipeline = append(pipeline, ConnectorPipeline{
-			Success:             step.Success,
-			Error:               step.Error,
-			Name:                string(step.DomainType),
-			SearchParameter:     step.SearchParameter,
-			Output:              step.Output,
-			keywordsPerCategory: step.KeywordsPerCategory,
-		})
+		if step.DomainType != "SUMMARY" {
+			pipeline = append(pipeline, ConnectorPipeline{
+				Success:             step.Success,
+				Error:               step.Error,
+				Name:                string(step.DomainType),
+				SearchParameter:     step.SearchParameter,
+				Output:              step.Output,
+				KeywordsPerCategory: step.KeywordsPerCategory,
+			})
+		}
 	}
 
 	return pipeline
@@ -162,6 +169,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		result, err = module.SearchDomain(dt, searchParams)
 
 		if err != nil {
+			spew.Dump("error", err)
 			http.Error(w, "Search failed", http.StatusInternalServerError)
 			return
 		}
@@ -173,17 +181,12 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			Name:                string(result.DomainType),
 			SearchParameter:     result.SearchParameter,
 			Output:              result.Output,
-			keywordsPerCategory: result.KeywordsPerCategory,
-		}
-
-		jsonResp, err := json.Marshal(pipeline)
-		if err != nil {
-			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-			return
+			KeywordsPerCategory: result.KeywordsPerCategory,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResp)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(pipeline)
 		return
 	}
 
@@ -201,11 +204,17 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 			Name:                string(result.DomainType),
 			SearchParameter:     result.SearchParameter,
 			Output:              result.Output,
-			keywordsPerCategory: result.KeywordsPerCategory,
+			KeywordsPerCategory: result.KeywordsPerCategory,
 		})
 	}
 
-	jsonResp, err := json.Marshal(pipeline)
+	response := map[string]interface{}{
+		"data":    pipeline,
+		"success": true,
+		"message": "Search completed successfully",
+	}
+
+	jsonResp, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
 		return
@@ -236,80 +245,53 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		skipDuplicates = false
 	}
 
+	executionID := r.URL.Query().Get("execution_id")
+	if executionID == "" {
+		executionID = domain.NewID().String()
+	}
+
 	// Check if streaming is requested
 	stream := r.URL.Query().Get("stream") == "true"
-
 	if stream {
 		s.dynamicPipelineStreamHandler(w, r, query, maxDepth, skipDuplicates)
 		return
 	}
 
-	// Configure the dynamic pipeline
-	config := module.DynamicPipelineConfig{
-		MaxDepth:           maxDepth,
-		MaxConcurrentSteps: 3,
-		DelayBetweenSteps:  5,
-		SkipDuplicates:     skipDuplicates,
-	}
+	ctx := infra.SetExecutionID(r.Context(), executionID)
 
-	// Available domains
-	availableDomains := domain.AllDomainTypes()
+	// Start pipeline execution in the background
+	go func() {
+		log.Printf("[%s] Starting background pipeline execution with query: %s, max depth: %d, skip duplicates: %v",
+			executionID, query, maxDepth, skipDuplicates)
 
-	// Execute the dynamic pipeline
-	dynamicResult, err := module.ExecuteDynamicPipeline(query, availableDomains, config)
-	if err != nil {
-		http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
-		return
-	}
-
-	// Optionally save the result to database
-	if save := r.URL.Query().Get("save"); save == "true" {
-		repos := s.GetRepositories()
-		pipelineRepo := repos.GetPipelineRepository()
-		_, err := pipelineRepo.CreateDynamicPipelineResult(r.Context(), dynamicResult)
+		_, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 		if err != nil {
-			// Log the error but don't fail the request
-			log.Printf("Failed to save pipeline result to database: %v", err)
+			log.Printf("[%s] Background pipeline execution failed: %v", executionID, err)
+		} else {
+			log.Printf("[%s] Background pipeline execution completed successfully", executionID)
 		}
-	}
+	}()
 
-	// Convert to the standard ConnectorPipeline format for compatibility
-	pipeline := convertDynamicPipelineToConnectorPipeline(dynamicResult)
+	// _, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
+	// if err != nil {
+	// 	http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
+	// 	return
+	// }
 
-	// Create response with both formats
+	// Return immediately with executionID
 	response := struct {
-		DynamicResult *module.DynamicPipelineResult `json:"dynamic_result"`
-		Pipeline      []ConnectorPipeline           `json:"pipeline"`
-		Summary       struct {
-			TotalSteps      int `json:"total_steps"`
-			SuccessfulSteps int `json:"successful_steps"`
-			FailedSteps     int `json:"failed_steps"`
-			MaxDepthReached int `json:"max_depth_reached"`
-		} `json:"summary"`
+		ExecutionID string `json:"execution_id"`
+		Message     string `json:"message"`
+		Status      string `json:"status"`
 	}{
-		DynamicResult: dynamicResult,
-		Pipeline:      pipeline,
-		Summary: struct {
-			TotalSteps      int `json:"total_steps"`
-			SuccessfulSteps int `json:"successful_steps"`
-			FailedSteps     int `json:"failed_steps"`
-			MaxDepthReached int `json:"max_depth_reached"`
-		}{
-			TotalSteps:      dynamicResult.TotalSteps,
-			SuccessfulSteps: dynamicResult.SuccessfulSteps,
-			FailedSteps:     dynamicResult.FailedSteps,
-			MaxDepthReached: dynamicResult.MaxDepthReached,
-		},
-	}
-
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
+		ExecutionID: executionID,
+		Message:     "Pipeline execution started in background",
+		Status:      "processing",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 // dynamicPipelineStreamHandler handles streaming pipeline results
@@ -343,7 +325,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 		defer close(done)
 
 		// Execute the dynamic pipeline with step callback
-		dynamicResult, err := s.executeDynamicPipelineWithCallback(query, availableDomains, config, stepChan)
+		dynamicResult, err := s.executeDynamicPipelineWithCallback(r.Context(), query, availableDomains, config, stepChan)
 		if err != nil {
 			// Send error as a step
 			errorStep := module.DynamicPipelineStep{
@@ -407,7 +389,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 				Name:                string(step.DomainType),
 				SearchParameter:     step.SearchParameter,
 				Output:              step.Output,
-				keywordsPerCategory: step.KeywordsPerCategory,
+				KeywordsPerCategory: step.KeywordsPerCategory,
 			}
 
 			// Send step as SSE event
@@ -437,15 +419,15 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 }
 
 // executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
-func (s *Server) executeDynamicPipelineWithCallback(query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeDynamicPipelineWithCallback(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
 	// Create a custom pipeline executor that streams steps
-	return s.executeStreamingPipeline(query, availableDomains, config, stepChan)
+	return s.executeStreamingPipeline(ctx, query, availableDomains, config, stepChan)
 }
 
 // executeStreamingPipeline executes the pipeline with real-time streaming
-func (s *Server) executeStreamingPipeline(query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
 	// Create the initial pipeline steps
-	initialResult, err := module.CreateDynamicPipeline(query, availableDomains, config)
+	initialResult, err := module.CreateDynamicPipeline(ctx, query, availableDomains, config)
 	if err != nil {
 		return nil, err
 	}
@@ -695,14 +677,9 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
@@ -730,14 +707,9 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 		"suggestions": suggestions,
 	}
 
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
@@ -764,12 +736,7 @@ func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.R
 		"total_results": len(request.Results),
 	}
 
-	jsonResp, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }

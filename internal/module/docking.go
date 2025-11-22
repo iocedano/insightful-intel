@@ -1,35 +1,49 @@
 package module
 
 import (
+	"encoding/json"
 	"fmt"
+	"insightful-intel/internal/custom"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/stuff"
+	"io"
+	"log"
 	"math"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/gocolly/colly"
 )
 
 var _ domain.DomainConnector[domain.GoogleDockingResult] = &GoogleDocking{}
 
 // GoogleDocking represents a Google Docking string search connector
 type GoogleDocking struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BasePath string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 // NewGoogleDockingDomain creates a new Google Docking domain instance
 func NewGoogleDockingDomain() GoogleDocking {
-	return GoogleDocking{
-		BasePath: "https://html.duckduckgo.com/html/",
-		Stuff:    *stuff.NewStuff(),
+	googleApiKey := os.Getenv("GOOGLE_API_KEY")
+	googleSearchEngineId := os.Getenv("GOOGLE_CX_KEY")
+	if googleApiKey == "" || googleSearchEngineId == "" {
+		log.Fatal("GOOGLE_API_KEY and GOOGLE_CX_KEY are not set")
 	}
+
+	googleSearchUrl := fmt.Sprintf("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s", googleApiKey, googleSearchEngineId)
+
+	return GoogleDocking{
+		BasePath: googleSearchUrl,
+		Stuff:    *custom.NewClient(),
+	}
+}
+
+type GoogleDockingSearchResponse struct {
+	Items []domain.GoogleDockingResult `json:"items"`
 }
 
 // GoogleDockingBuilder provides a fluent interface for building Google Docking searches
@@ -209,49 +223,27 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 
 	q = fmt.Sprintf("%s %s", params.Query, q)
 
-	spew.Dump("SearchWithParams::: q", params.Query, "q", q)
+	spew.Dump("q", q)
 
-	URL, err := url.Parse(gd.BasePath)
+	resp, err := gd.Stuff.Get(fmt.Sprintf("%s&q=%s", gd.BasePath, url.QueryEscape(q)), map[string]string{}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("wrong google url")
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	c := colly.NewCollector(
-		colly.AllowedDomains(URL.Hostname()),
-	)
-	c.Async = true
+	var result GoogleDockingSearchResponse
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
+	}
+	spew.Dump("result", result)
+	spew.Dump("result.Items", result.Items[0])
 
-	var news []domain.GoogleDockingResult
-
-	c.OnHTML("#links div.result", func(e *colly.HTMLElement) {
-		article := domain.GoogleDockingResult{}
-
-		article.URL = extractURLFromQuery(e.ChildAttr(".result__body a.result__a", "href"))
-		article.Title = e.ChildText(".result__body a.result__a")
-		article.Description = e.ChildText("a.result__snippet")
-		article.SearchParameter = q
-		article.Keywords = append(article.Keywords, params.IncludeKeywords...)
-		article.Keywords = append(article.Keywords, params.ExcludeKeywords...)
-		article.Keywords = append(article.Keywords, params.FileTypeKeywords...)
-		article.Keywords = append(article.Keywords, params.SitesKeywords...)
-		article.Relevance = 1.0
-		article.Rank = len(news) + 1
-
-		news = append(news, article)
-
-	})
-
-	c.Limit(&colly.LimitRule{
-		DomainGlob:  "*",             // Apply to all domains
-		Parallelism: 2,               // Allow 2 concurrent requests
-		Delay:       5 * time.Second, // Delay between requests to the same domain
-	})
-
-	c.Visit(fmt.Sprintf("%s?q=%s", gd.BasePath, url.QueryEscape(q)))
-
-	c.Wait()
-
-	return news, nil
+	return result.Items, nil
 }
 
 func extractURLFromQuery(URL string) string {

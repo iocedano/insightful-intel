@@ -23,7 +23,7 @@ func NewDynamicPipelineInteractor(
 	}
 }
 
-func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, query string, maxDepth int, skipDuplicates bool) error {
+func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, query string, maxDepth int, skipDuplicates bool) (*module.DynamicPipelineResult, error) {
 	// Create a channel to receive pipeline steps
 	stepChan := make(chan module.DynamicPipelineStep, 100)
 	done := make(chan bool)
@@ -83,7 +83,7 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 		select {
 		case step, ok := <-stepChan:
 			if !ok {
-				return nil
+				return nil, nil
 			}
 
 			stepCount++
@@ -92,11 +92,11 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 
 		case <-ctx.Done():
 			// Client disconnected
-			return nil
+			return nil, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
@@ -108,7 +108,8 @@ func (s *DynamicPipelineInteractor) executeDynamicPipelineWithCallback(ctx conte
 // executeStreamingPipeline executes the pipeline with real-time streaming
 func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
 	// Create the initial pipeline steps
-	createdPipelineResult, err := module.CreateDynamicPipeline(query, availableDomains, config)
+	
+	createdPipelineResult, err := module.CreateDynamicPipeline(ctx, query, availableDomains, config)
 	if err != nil {
 		return nil, err
 	}

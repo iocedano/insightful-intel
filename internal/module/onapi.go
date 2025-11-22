@@ -3,8 +3,8 @@ package module
 import (
 	"encoding/json"
 	"fmt"
+	"insightful-intel/internal/custom"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/stuff"
 	"io"
 	"strings"
 	"time"
@@ -13,9 +13,9 @@ import (
 var _ domain.DomainConnector[domain.Entity] = &Onapi{}
 
 type Onapi struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BaseParh string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 type OnapiEntityResponse struct {
@@ -48,18 +48,16 @@ func (*Onapi) GetDomainType() domain.DomainType {
 
 // onapi endpoint
 func NewOnapiDomain() domain.DomainConnector[domain.Entity] {
-	pm := stuff.PathMap{
-		BaseURL: "https://www.onapi.gob.do/busqapi/signos/",
-		Paths: map[string]string{
-			"firstpage": "",
-			"detail":    "byexp",
-		},
-	}
-
 	return &Onapi{
 		BaseParh: "https://www.onapi.gob.do/busqapi/signos/",
-		Stuff:    *stuff.NewStuff(),
-		PathMap:  pm,
+		Stuff:    *custom.NewClient(),
+		PathMap: custom.CustomPathMap{
+			BaseURL: "https://www.onapi.gob.do/busqapi/signos/",
+			Paths: map[string]string{
+				"firstpage": "",
+				"detail":    "byexp",
+			},
+		},
 	}
 }
 
@@ -127,7 +125,7 @@ func (o *Onapi) Search(query string) ([]domain.Entity, error) {
 }
 
 func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
-	response, err := o.Stuff.Client.Get(o.PathMap.GetURLFrom("firstpage"), map[string]string{
+	response, err := o.Stuff.Get(o.PathMap.GetURLFrom("firstpage"), map[string]string{
 		"subtipo":  "",
 		"texto":    query,
 		"tipo":     "",
@@ -181,7 +179,7 @@ func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
 }
 
 func (o *Onapi) GetDetails(numero int32, serie int32) (*domain.Entity, error) {
-	response, err := o.Stuff.Client.Get(o.PathMap.GetURLFrom("detail"), map[string]string{
+	response, err := o.Stuff.Get(o.PathMap.GetURLFrom("detail"), map[string]string{
 		"numero":    fmt.Sprintf("%d", numero),
 		"tipoExped": "E",
 		"serie":     fmt.Sprintf("%d", serie),

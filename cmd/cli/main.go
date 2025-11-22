@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"insightful-intel/internal/database"
+	"insightful-intel/internal/infra"
 	"insightful-intel/internal/interactor"
 	"insightful-intel/internal/repositories"
 
@@ -60,15 +61,17 @@ The search will explore related entities across ONAPI, SCJ, DGII, PGR, and Googl
 		dynamicPipelineInteractor := interactor.NewDynamicPipelineInteractor(repositoryFactory)
 
 		// Create context with execution ID
-		ctx := context.WithValue(context.Background(), executionIDKey, executionID.String())
+		ctx := infra.SetExecutionID(context.Background(), executionID.String())
 
 		log.Printf("Executing dynamic pipeline [%s] with query: %s, max depth: %d, skip duplicates: %v",
 			executionID.String(), query, maxDepth, skipDuplicates)
 
-		err := dynamicPipelineInteractor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
+		dynamicResult, err := dynamicPipelineInteractor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 		if err != nil {
 			log.Fatalf("[%s] failed to execute dynamic pipeline: %v", executionID.String(), err)
 		}
+
+		fmt.Println(dynamicResult)
 
 		log.Printf("[%s] Dynamic pipeline execution completed", executionID.String())
 	},

@@ -164,8 +164,18 @@ func (r *DgiiRepository) List(ctx context.Context, offset, limit int) ([]domain.
 		var entity domain.Register
 
 		err := rows.Scan(
-			&entity.ID, &entity.DomainSearchResultID, &entity.RNC, &entity.RazonSocial, &entity.NombreComercial, &entity.Categoria,
-			&entity.RegimenPagos, &entity.FacturadorElectronico, &entity.LicenciaComercial, &entity.Estado,
+			&entity.ID,                    // id
+			&entity.DomainSearchResultID,  // domain_search_result_id
+			&entity.RNC,                   // rnc
+			&entity.RazonSocial,           // razon_social
+			&entity.NombreComercial,       // nombre_comercial
+			&entity.Categoria,             // categoria
+			&entity.RegimenPagos,          // regimen_pagos
+			&entity.FacturadorElectronico, // facturador_electronico
+			&entity.LicenciaComercial,     // licencia_comercial
+			&entity.Estado,                // estado
+			new(interface{}),              // created_at (ignored)
+			new(interface{}),              // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err

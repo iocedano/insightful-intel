@@ -6,9 +6,9 @@ import (
 
 type PGRNews struct {
 	ID                   ID        `json:"id"`
-	DomainSearchResultID ID        `json:"domainSearchResultId"`
+	DomainSearchResultID ID        `json:"domain_search_result_id"`
 	URL                  string    `json:"url"`
 	Title                string    `json:"title"`
-	CreatedAt            time.Time `json:"createdAt"`
-	UpdatedAt            time.Time `json:"updatedAt"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }

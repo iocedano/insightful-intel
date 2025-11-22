@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"insightful-intel/internal/database"
+	"insightful-intel/internal/interactor"
 	"insightful-intel/internal/repositories"
 	"insightful-intel/internal/server"
 )
@@ -51,7 +52,8 @@ func main() {
 	// Initialize repository factory
 	repoFactory := repositories.NewRepositoryFactory(db)
 
-	server := server.NewServer(repoFactory)
+	dynamicPipelineInteractor := interactor.NewDynamicPipelineInteractor(repoFactory)
+	server := server.NewServer(repoFactory, dynamicPipelineInteractor)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)

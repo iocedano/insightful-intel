@@ -115,7 +115,16 @@ func (r *DockingRepository) List(ctx context.Context, offset, limit int) ([]doma
 		var keywordsJSON string
 
 		err := rows.Scan(
-			&entity.ID, &entity.DomainSearchResultID, &entity.URL, &entity.Title, &entity.Description, &entity.Relevance, &entity.Rank, &keywordsJSON,
+			&entity.ID,                   // id
+			&entity.DomainSearchResultID, // domain_search_result_id
+			&entity.URL,                  // url
+			&entity.Title,                // title
+			&entity.Description,          // description
+			&entity.Relevance,            // relevance
+			&entity.Rank,                 // search_rank
+			&keywordsJSON,                // keywords
+			new(interface{}),             // created_at (ignored)
+			new(interface{}),             // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err
@@ -162,7 +171,16 @@ func (r *DockingRepository) Search(ctx context.Context, query string, offset, li
 		var keywordsJSON string
 
 		err := rows.Scan(
-			&entity.ID, &entity.DomainSearchResultID, &entity.URL, &entity.Title, &entity.Description, &entity.Relevance, &entity.Rank, &keywordsJSON,
+			&entity.ID,                   // id
+			&entity.DomainSearchResultID, // domain_search_result_id
+			&entity.URL,                  // url
+			&entity.Title,                // title
+			&entity.Description,          // description
+			&entity.Relevance,            // relevance
+			&entity.Rank,                 // search_rank
+			&keywordsJSON,                // keywords
+			new(interface{}),             // created_at (ignored)
+			new(interface{}),             // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err
@@ -244,7 +262,16 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 		var keywordsJSON string
 
 		err := rows.Scan(
-			&entity.URL, &entity.Title, &entity.Description, &entity.Relevance, &entity.Rank, &keywordsJSON,
+			&entity.ID,                   // id
+			&entity.DomainSearchResultID, // domain_search_result_id
+			&entity.URL,                  // url
+			&entity.Title,                // title
+			&entity.Description,          // description
+			&entity.Relevance,            // relevance
+			&entity.Rank,                 // search_rank
+			&keywordsJSON,                // keywords
+			new(interface{}),             // created_at (ignored)
+			new(interface{}),             // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err

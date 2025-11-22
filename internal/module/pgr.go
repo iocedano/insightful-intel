@@ -2,8 +2,8 @@ package module
 
 import (
 	"fmt"
+	"insightful-intel/internal/custom"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/stuff"
 	"net/url"
 	"strings"
 
@@ -13,15 +13,15 @@ import (
 var _ domain.DomainConnector[domain.PGRNews] = &Pgr{}
 
 type Pgr struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BaseParh string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 func NewPgrDomain() domain.DomainConnector[domain.PGRNews] {
 	return &Pgr{
 		BaseParh: "https://pgr.gob.do/",
-		Stuff:    *stuff.NewStuff(),
+		Stuff:    *custom.NewClient(),
 	}
 }
 

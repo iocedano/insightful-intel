@@ -156,7 +156,12 @@ func (r *PgrRepository) List(ctx context.Context, offset, limit int) ([]domain.P
 		var entity domain.PGRNews
 
 		err := rows.Scan(
-			&entity.ID, &entity.DomainSearchResultID, &entity.URL, &entity.Title,
+			&entity.ID,
+			&entity.DomainSearchResultID,
+			&entity.URL,
+			&entity.Title,
+			new(interface{}), // created_at (ignored)
+			new(interface{}), // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err

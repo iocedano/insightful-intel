@@ -1,10 +1,10 @@
-package stuff
+package custom
 
 import "fmt"
 
-type Stuff struct {
+type CustomClient struct {
 	Client    *CustomClient
-	connected *Stuff
+	connected *CustomClient
 	Stored    func(any) error
 	Retrieved func() (any, error)
 	// Deleted func() error
@@ -13,19 +13,19 @@ type Stuff struct {
 }
 
 type StuffInterface interface {
-	Connect(conn *Stuff)
+	Connect(conn *CustomClient)
 	Store(data any) error
 	Retrieve() (any, error)
 	Search(query string) (any, error)
 }
 
-func NewStuff() *Stuff {
-	return &Stuff{
+func NewCustomClient() *CustomClient {
+	return &CustomClient{
 		Client: NewCustomClient(),
 	}
 }
 
-func (s *Stuff) Connect(conn *Stuff) {
+func (s *CustomClient) Connect(conn *CustomClient) {
 	s.connected = conn
 }
 
@@ -43,19 +43,19 @@ func (s *Stuff) Connect(conn *Stuff) {
 // 	return s.Retrieved()
 // }
 
-func (s *Stuff) Search(query string) (any, error) {
+func (s *CustomClient) Search(query string) (any, error) {
 	if s.Search == nil {
 		return nil, fmt.Errorf("search function is not set")
 	}
 	return s.Search(query)
 }
 
-type PathMap struct {
+type CustomPathMap struct {
 	BaseURL string
 	Paths   map[string]string
 }
 
-func (pm PathMap) GetURLFrom(path string) string {
+func (pm *CustomPathMap) GetURLFrom(path string) string {
 	if p, ok := pm.Paths[path]; ok {
 		return pm.BaseURL + p
 	}

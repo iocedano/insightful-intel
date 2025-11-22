@@ -16,6 +16,8 @@ services:
       BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
       BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       BLUEPRINT_DB_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_CX_KEY: ${GOOGLE_CX_KEY}
     depends_on:
       mysql_bp:
         condition: service_healthy

@@ -66,14 +66,32 @@ func (r *OnapiRepository) GetByID(ctx context.Context, id string) (domain.Entity
 	`
 
 	var entity domain.Entity
-	var imagenesJSON, listaClasesJSON string
+	var imagenesJSON, listaClasesJSON []byte
+	var createdAt, updatedAt sql.NullTime
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&entity.ID, &entity.DomainSearchResultID, &entity.SerieExpediente, &entity.NumeroExpediente, &entity.Certificado,
-		&entity.Tipo, &entity.SubTipo, &entity.Texto, &entity.Clases, &entity.AplicadoAProteger,
-		&entity.Expedicion, &entity.Vencimiento, &entity.EnTramite, &entity.Titular,
-		&entity.Gestor, &entity.Domicilio, &entity.Status, &entity.TipoSigno,
-		&imagenesJSON, &listaClasesJSON,
+		&entity.ID,
+		&entity.DomainSearchResultID,
+		&entity.SerieExpediente,
+		&entity.NumeroExpediente,
+		&entity.Certificado,
+		&entity.Tipo,
+		&entity.SubTipo,
+		&entity.Texto,
+		&entity.Clases,
+		&entity.AplicadoAProteger,
+		&entity.Expedicion,
+		&entity.Vencimiento,
+		&entity.EnTramite,
+		&entity.Titular,
+		&entity.Gestor,
+		&entity.Domicilio,
+		&entity.Status,
+		&entity.TipoSigno,
+		&imagenesJSON,
+		&listaClasesJSON,
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
@@ -141,13 +159,32 @@ func (r *OnapiRepository) List(ctx context.Context, offset, limit int) ([]domain
 	for rows.Next() {
 		var entity domain.Entity
 		var imagenesJSON, listaClasesJSON string
+		var createdAt, updatedAt any // could be time.Time or string; check domain.Entity
 
+		// Ensure the order and number of columns in Scan matches the SELECT above
 		err := rows.Scan(
-			&entity.ID, &entity.DomainSearchResultID, &entity.SerieExpediente, &entity.NumeroExpediente, &entity.Certificado,
-			&entity.Tipo, &entity.SubTipo, &entity.Texto, &entity.Clases, &entity.AplicadoAProteger,
-			&entity.Expedicion, &entity.Vencimiento, &entity.EnTramite, &entity.Titular,
-			&entity.Gestor, &entity.Domicilio, &entity.Status, &entity.TipoSigno,
-			&imagenesJSON, &listaClasesJSON,
+			&entity.ID,                   // id
+			&entity.DomainSearchResultID, // domain_search_result_id
+			&entity.SerieExpediente,      // serie_expediente
+			&entity.NumeroExpediente,     // numero_expediente
+			&entity.Certificado,          // certificado
+			&entity.Tipo,                 // tipo
+			&entity.SubTipo,              // subtipo
+			&entity.Texto,                // texto
+			&entity.Clases,               // clases
+			&entity.AplicadoAProteger,    // aplicado_a_proteger
+			&entity.Expedicion,           // expedicion
+			&entity.Vencimiento,          // vencimiento
+			&entity.EnTramite,            // en_tramite
+			&entity.Titular,              // titular
+			&entity.Gestor,               // gestor
+			&entity.Domicilio,            // domicilio
+			&entity.Status,               // status
+			&entity.TipoSigno,            // tipo_signo
+			&imagenesJSON,                // imagenes
+			&listaClasesJSON,             // lista_clases
+			&createdAt,                   // created_at
+			&updatedAt,                   // updated_at
 		)
 		if err != nil {
 			return nil, err

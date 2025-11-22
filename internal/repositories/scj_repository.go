@@ -155,11 +155,15 @@ func (r *ScjRepository) List(ctx context.Context, offset, limit int) ([]domain.S
 		var entity domain.ScjCase
 
 		err := rows.Scan(
+			&entity.ID,
+			&entity.DomainSearchResultID,
 			&entity.Linea, &entity.AgnoCabecera, &entity.MesCabecera, &entity.URLCabecera, &entity.URLCuerpo,
 			&entity.IDExpediente, &entity.NoExpediente, &entity.NoSentencia, &entity.NoUnico, &entity.NoInterno,
 			&entity.IDTribunal, &entity.DescTribunal, &entity.IDMateria, &entity.DescMateria, &entity.FechaFallo,
 			&entity.Involucrados, &entity.GuidBlob, &entity.TipoDocumentoAdjunto, &entity.TotalFilas,
 			&entity.URLBlob, &entity.Extension, &entity.Origen, &entity.Activo,
+			new(interface{}), // created_at (ignored)
+			new(interface{}),
 		)
 		if err != nil {
 			return nil, err

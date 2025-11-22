@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/stuff"
+	"insightful-intel/internal/custom"
 	"io"
 	"net/url"
 	"strings"
@@ -15,15 +15,15 @@ import (
 var _ domain.DomainConnector[domain.ScjCase] = &Scj{}
 
 type Scj struct {
-	Stuff    stuff.Stuff
+	Stuff    custom.Client
 	BaseParh string
-	PathMap  stuff.PathMap
+	PathMap  custom.CustomPathMap
 }
 
 func NewScjDomain() domain.DomainConnector[domain.ScjCase] {
 	return &Scj{
 		BaseParh: "https://consultasentenciascj.poderjudicial.gob.do/Home/GetExpedientes",
-		Stuff:    *stuff.NewStuff(),
+		Stuff:    *custom.NewClient(),
 	}
 }
 
@@ -35,7 +35,7 @@ func (p *Scj) Search(query string) ([]domain.ScjCase, error) {
 	form.Add("start", "0")
 	form.Add("length", "10")
 
-	resp, err := p.Stuff.Client.Post(p.BaseParh, form.Encode(), map[string]string{
+	resp, err := p.Stuff.Post(p.BaseParh, form.Encode(), map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 		"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
 	})
