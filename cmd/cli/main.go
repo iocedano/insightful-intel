@@ -21,7 +21,6 @@ type contextKey string
 const executionIDKey contextKey = "executionID"
 
 var (
-	query          string
 	maxDepth       int
 	skipDuplicates bool
 )
@@ -45,10 +44,9 @@ var runCmd = &cobra.Command{
 	Short: "Run dynamic pipeline search",
 	Long: `Run a dynamic pipeline search with the specified query across multiple domains.
 The search will explore related entities across ONAPI, SCJ, DGII, PGR, and Google Docking.`,
-	Args: cobra.ExactArgs(2),
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		query := args[0]
-		skipDuplicates := args[1] == "true"
 
 		// Generate a unique execution ID
 		executionID := uuid.New()
