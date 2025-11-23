@@ -9,6 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"insightful-intel/internal/database"
+	"insightful-intel/internal/interactor"
+	"insightful-intel/internal/repositories"
 	"insightful-intel/internal/server"
 )
 
@@ -38,8 +41,19 @@ func gracefulShutdown(apiServer *http.Server, done chan bool) {
 }
 
 func main() {
+	// Initialize database
+	db := database.New()
 
-	server := server.NewServer()
+	// Run database migrations
+	if err := runMigrations(db); err != nil {
+		panic(fmt.Sprintf("failed to run migrations: %v", err))
+	}
+
+	// Initialize repository factory
+	repoFactory := repositories.NewRepositoryFactory(db)
+
+	dynamicPipelineInteractor := interactor.NewDynamicPipelineInteractor(repoFactory)
+	server := server.NewServer(repoFactory, dynamicPipelineInteractor)
 
 	// Create a done channel to signal when the shutdown is complete
 	done := make(chan bool, 1)
@@ -55,4 +69,11 @@ func main() {
 	// Wait for the graceful shutdown to complete
 	<-done
 	log.Println("Graceful shutdown complete.")
+}
+
+// runMigrations executes database migrations
+func runMigrations(db database.Service) error {
+	migrationService := database.NewMigrationService(db.GetDB())
+	migrations := database.GetInitialMigrations()
+	return migrationService.RunMigrations(migrations)
 }

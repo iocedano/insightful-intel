@@ -1,0 +1,54 @@
+services:
+  cli:
+    build:
+      context: .
+      dockerfile: CLI.Dockerfile
+    ports:
+      - ${PORT}:${PORT}
+    volumes:
+      - ./:/app
+    environment:
+      APP_ENV: ${APP_ENV}
+      PORT: ${PORT}
+      BLUEPRINT_DB_HOST: ${BLUEPRINT_DB_HOST}
+      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT}
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      BLUEPRINT_DB_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_CX_KEY: ${GOOGLE_CX_KEY}
+    depends_on:
+      mysql_bp:
+        condition: service_healthy
+    networks:
+      - blueprint
+    # Allow passing commands to the CLI
+    # Default CMD is Air for development, override with command for running
+    stdin_open: true
+    tty: true
+  mysql_bp:
+    image: mysql:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      MYSQL_USER: ${BLUEPRINT_DB_USERNAME}
+      MYSQL_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
+    ports:
+      - "${BLUEPRINT_DB_PORT}:3306"
+    volumes:
+      - mysql_volume_bp:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "${BLUEPRINT_DB_HOST}", "-u", "${BLUEPRINT_DB_USERNAME}", "--password=${BLUEPRINT_DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 15s 
+    networks:
+      - blueprint
+
+volumes:
+  mysql_volume_bp:
+networks:
+  blueprint:
