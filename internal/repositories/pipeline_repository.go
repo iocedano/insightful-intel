@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"insightful-intel/internal/database"
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/module"
 
 	"github.com/google/uuid"
 )
@@ -53,7 +52,7 @@ func (r *PipelineRepository) CreateDomainSearchResult(ctx context.Context, resul
 }
 
 // createDynamicPipelineResult inserts a DynamicPipelineResult
-func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) (*module.DynamicPipelineResult, error) {
+func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, result *domain.DynamicPipelineResult) (*domain.DynamicPipelineResult, error) {
 	if result.ID == domain.ID(uuid.Nil) {
 		result.ID = domain.NewID()
 	}
@@ -70,6 +69,7 @@ func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, re
 		result.ID, result.TotalSteps, result.SuccessfulSteps, result.FailedSteps, result.MaxDepthReached, configJSON,
 	)
 	if err != nil {
+
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func (r *PipelineRepository) CreateDynamicPipelineResult(ctx context.Context, re
 }
 
 // CreateDynamicPipelineSteps inserts individual pipeline steps
-func (r *PipelineRepository) CreateDynamicPipelineStep(ctx context.Context, step *module.DynamicPipelineStep) error {
+func (r *PipelineRepository) CreateDynamicPipelineStep(ctx context.Context, step *domain.DynamicPipelineStep) error {
 	if step.ID == domain.ID(uuid.Nil) {
 		step.ID = domain.NewID()
 	}
@@ -113,6 +113,16 @@ func (r *PipelineRepository) CreateDynamicPipelineStep(ctx context.Context, step
 	}
 
 	return nil
+}
+
+// GetByID retrieves a pipeline result by its ID
+func (r *PipelineRepository) GetPipelineByID(ctx context.Context, id string) (*domain.DynamicPipelineResult, error) {
+	dynamicResult, err := r.getDynamicPipelineResultByID(ctx, id)
+	if err == nil {
+		return dynamicResult, nil
+	}
+
+	return nil, fmt.Errorf("pipeline result not found with ID: %s", id)
 }
 
 // GetByID retrieves a pipeline result by its ID
@@ -162,18 +172,25 @@ func (r *PipelineRepository) getDomainSearchResultByID(ctx context.Context, id s
 }
 
 // getDynamicPipelineResultByID retrieves a DynamicPipelineResult by ID
-func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, id string) (*module.DynamicPipelineResult, error) {
+func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, id string) (*domain.DynamicPipelineResult, error) {
 	query := `
-		SELECT total_steps, successful_steps, failed_steps, max_depth_reached, config, created_at, updated_at
+		SELECT id, total_steps, successful_steps, failed_steps, max_depth_reached, config, created_at, updated_at
 		FROM dynamic_pipeline_results 
 		WHERE id = ?
 	`
 
-	var result module.DynamicPipelineResult
+	var result domain.DynamicPipelineResult
 	var configJSON string
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&result.TotalSteps, &result.SuccessfulSteps, &result.FailedSteps, &result.MaxDepthReached, &configJSON,
+		&result.ID,
+		&result.TotalSteps,
+		&result.SuccessfulSteps,
+		&result.FailedSteps,
+		&result.MaxDepthReached,
+		&configJSON,
+		new(interface{}), // created_at, ignored
+		new(interface{}), // updated_at, ignored
 	)
 
 	if err != nil {
@@ -192,30 +209,37 @@ func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, i
 	return &result, nil
 }
 
-// getPipelineSteps retrieves steps for a pipeline result
-func (r *PipelineRepository) getPipelineSteps(ctx context.Context, pipelineID string) ([]module.DynamicPipelineStep, error) {
+func (r *PipelineRepository) GetPipelineStepsByID(ctx context.Context, id string) ([]domain.DynamicPipelineStep, error) {
 	query := `
-		SELECT domain_type, search_parameter, category, keywords, success, error_message, 
-			   output, keywords_per_category, depth, created_at, updated_at
+		SELECT id, domain_type, search_parameter, category, keywords, success, error_message, 
+			   output, keywords_per_category, depth
 		FROM dynamic_pipeline_steps 
 		WHERE pipeline_id = ?
 		ORDER BY created_at ASC
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, pipelineID)
+	rows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var steps []module.DynamicPipelineStep
+	var steps []domain.DynamicPipelineStep
 	for rows.Next() {
-		var step module.DynamicPipelineStep
+		var step domain.DynamicPipelineStep
 		var domainType, category, keywordsJSON, outputJSON, keywordsPerCategoryJSON, errorMessage string
 
 		err := rows.Scan(
-			&domainType, &step.SearchParameter, &category, &keywordsJSON, &step.Success, &errorMessage,
-			&outputJSON, &keywordsPerCategoryJSON, &step.Depth,
+			&step.ID,
+			&domainType,              // domain_type
+			&step.SearchParameter,    // search_parameter
+			&category,                // category
+			&keywordsJSON,            // keywords
+			&step.Success,            // success
+			&errorMessage,            // error_message
+			&outputJSON,              // output
+			&keywordsPerCategoryJSON, // keywords_per_category
+			&step.Depth,              // depth
 		)
 		if err != nil {
 			return nil, err
@@ -236,12 +260,63 @@ func (r *PipelineRepository) getPipelineSteps(ctx context.Context, pipelineID st
 	return steps, nil
 }
 
+// getPipelineSteps retrieves steps for a pipeline result
+func (r *PipelineRepository) getPipelineSteps(ctx context.Context, pipelineID string) ([]domain.DynamicPipelineStep, error) {
+	query := `
+		SELECT id, domain_type, search_parameter, category, keywords, success, error_message, 
+			   output, keywords_per_category, depth, created_at
+		FROM dynamic_pipeline_steps 
+		WHERE pipeline_id = ?
+		ORDER BY created_at ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, pipelineID)
+	if err != nil {
+		return []domain.DynamicPipelineStep{}, err
+	}
+	defer rows.Close()
+
+	var steps []domain.DynamicPipelineStep
+	for rows.Next() {
+		var step domain.DynamicPipelineStep
+		var domainType, category, keywordsJSON, outputJSON, keywordsPerCategoryJSON, errorMessage string
+
+		err := rows.Scan(
+			&step.ID,
+			&domainType,              // domain_type
+			&step.SearchParameter,    // search_parameter
+			&category,                // category
+			&keywordsJSON,            // keywords
+			&step.Success,            // success
+			&errorMessage,            // error_message
+			&outputJSON,              // output
+			&keywordsPerCategoryJSON, // keywords_per_category
+			&step.Depth,              // depth
+			new(interface{}),         // created_at, ignored
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if errorMessage != "" {
+			step.Error = fmt.Errorf(errorMessage)
+		}
+		json.Unmarshal([]byte(keywordsJSON), &step.Keywords)
+		json.Unmarshal([]byte(outputJSON), &step.Output)
+		json.Unmarshal([]byte(keywordsPerCategoryJSON), &step.KeywordsPerCategory)
+
+		steps = append(steps, step)
+	}
+
+	return steps, nil
+}
+
 // Update modifies an existing pipeline result
 func (r *PipelineRepository) Update(ctx context.Context, id string, entity any) error {
 	switch v := entity.(type) {
 	case *domain.DomainSearchResult:
 		return r.updateDomainSearchResult(ctx, v)
-	case *module.DynamicPipelineResult:
+	case *domain.DynamicPipelineResult:
 		return r.UpdateDynamicPipelineResult(ctx, v)
 	default:
 		return fmt.Errorf("unsupported pipeline result type: %T", entity)
@@ -274,7 +349,7 @@ func (r *PipelineRepository) updateDomainSearchResult(ctx context.Context, resul
 }
 
 // updateDynamicPipelineResult updates a DynamicPipelineResult
-func (r *PipelineRepository) UpdateDynamicPipelineResult(ctx context.Context, result *module.DynamicPipelineResult) error {
+func (r *PipelineRepository) UpdateDynamicPipelineResult(ctx context.Context, result *domain.DynamicPipelineResult) error {
 	query := `
 		UPDATE dynamic_pipeline_results SET
 			total_steps = ?, successful_steps = ?, failed_steps = ?, max_depth_reached = ?, 
@@ -315,11 +390,11 @@ func (r *PipelineRepository) Delete(ctx context.Context, id string) error {
 }
 
 // List retrieves multiple pipeline results with pagination
-func (r *PipelineRepository) List(ctx context.Context, offset, limit int) ([]any, error) {
-	// Get DomainSearchResults
+func (r *PipelineRepository) List(ctx context.Context, offset, limit int) ([]*domain.DynamicPipelineResult, error) {
+	// Get DomainSearchResult and DynamicPipelineResult
 	domainQuery := `
-		SELECT id, success, error_message, domain_type, search_parameter, keywords_per_category, output, created_at, updated_at
-		FROM domain_search_results 
+		SELECT id, total_steps, successful_steps, failed_steps, max_depth_reached, config, created_at, updated_at
+		FROM dynamic_pipeline_results 
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`
@@ -330,24 +405,26 @@ func (r *PipelineRepository) List(ctx context.Context, offset, limit int) ([]any
 	}
 	defer rows.Close()
 
-	var results []any
+	var results []*domain.DynamicPipelineResult
 	for rows.Next() {
-		var result domain.DomainSearchResult
-		var id, errorMessage, domainType, keywordsJSON, outputJSON string
-
+		var result domain.DynamicPipelineResult
+		var configJSON string
+		// Need to scan all the columns selected in the query
 		err := rows.Scan(
-			&id, &result.Success, &errorMessage, &domainType, &result.SearchParameter, &keywordsJSON, &outputJSON,
+			&result.ID,
+			&result.TotalSteps,
+			&result.SuccessfulSteps,
+			&result.FailedSteps,
+			&result.MaxDepthReached,
+			&configJSON,      // config
+			new(interface{}), // created_at (ignored)
+			new(interface{}), // updated_at (ignored)
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		if errorMessage != "" {
-			result.Error = fmt.Errorf(errorMessage)
-		}
-		result.DomainType = domain.DomainType(domainType)
-		json.Unmarshal([]byte(keywordsJSON), &result.KeywordsPerCategory)
-		json.Unmarshal([]byte(outputJSON), &result.Output)
+		json.Unmarshal([]byte(configJSON), &result.Config)
 
 		results = append(results, &result)
 	}
@@ -502,7 +579,7 @@ func (r *PipelineRepository) GetKeywordsByCategory(ctx context.Context, resultID
 	switch v := result.(type) {
 	case *domain.DomainSearchResult:
 		return v.KeywordsPerCategory, nil
-	case *module.DynamicPipelineResult:
+	case *domain.DynamicPipelineResult:
 		// Aggregate keywords from all steps
 		aggregated := make(map[domain.KeywordCategory][]string)
 		for _, step := range v.Steps {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api';
 import type { DomainSearchResult } from '../types';
-import DomainOutput from './DomainOutput';
+import DomainOutput from '../components/DomainOutput';
 
 export default function Search() {
   const [query, setQuery] = useState('');

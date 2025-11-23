@@ -7,7 +7,8 @@ import (
 	"strconv"
 
 	"insightful-intel/internal/domain"
-	"insightful-intel/internal/module"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // onapiHandler handles ONAPI repository operations
@@ -197,6 +198,23 @@ func (s *Server) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
+		id := r.URL.Query().Get("id")
+		if id != "" {
+			dynamicResult, err := pipelineRepo.GetPipelineByID(r.Context(), id)
+			if err != nil {
+				spew.Dump("error getting dynamic pipeline result by ID ----> ", err)
+				http.Error(w, fmt.Sprintf("Failed to get pipeline result: %v", err), http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": true,
+				"data":    dynamicResult,
+			})
+			return
+		}
+
 		// List pipeline results with pagination
 		offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 		limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
@@ -269,7 +287,7 @@ func (s *Server) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseDynamicPipelineResult attempts to parse the input data as a DynamicPipelineResult
-func (s *Server) parseDynamicPipelineResult(data map[string]interface{}) (*module.DynamicPipelineResult, bool) {
+func (s *Server) parseDynamicPipelineResult(data map[string]interface{}) (*domain.DynamicPipelineResult, bool) {
 	// Check if this looks like a dynamic pipeline result
 	if _, hasSteps := data["steps"]; !hasSteps {
 		return nil, false
@@ -281,7 +299,7 @@ func (s *Server) parseDynamicPipelineResult(data map[string]interface{}) (*modul
 		return nil, false
 	}
 
-	var result module.DynamicPipelineResult
+	var result domain.DynamicPipelineResult
 	if err := json.Unmarshal(jsonData, &result); err != nil {
 		return nil, false
 	}
@@ -384,27 +402,9 @@ func (s *Server) pipelineStepsHandler(w http.ResponseWriter, r *http.Request) {
 	pipelineRepo := repos.GetPipelineRepository()
 
 	// Get the pipeline result by ID
-	result, err := pipelineRepo.GetByID(r.Context(), pipelineID)
+	result, err := pipelineRepo.GetPipelineStepsByID(r.Context(), pipelineID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get pipeline result: %v", err), http.StatusNotFound)
-		return
-	}
-
-	// Extract steps based on result type
-	var steps []interface{}
-	switch v := result.(type) {
-	case *module.DynamicPipelineResult:
-		// Convert DynamicPipelineStep to interface{} for JSON marshaling
-		steps = make([]interface{}, len(v.Steps))
-		for i, step := range v.Steps {
-			steps[i] = step
-		}
-	case *domain.DomainSearchResult:
-		// For DomainSearchResult, we can return it as a single "step"
-		// or return an empty array if steps aren't applicable
-		steps = []interface{}{}
-	default:
-		http.Error(w, fmt.Sprintf("Unsupported pipeline result type: %T", result), http.StatusBadRequest)
 		return
 	}
 
@@ -412,7 +412,7 @@ func (s *Server) pipelineStepsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":     true,
 		"pipeline_id": pipelineID,
-		"steps":       steps,
-		"count":       len(steps),
+		"steps":       result,
+		"count":       len(result),
 	})
 }

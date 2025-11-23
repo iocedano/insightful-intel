@@ -10,7 +10,6 @@ import (
 	"math"
 	"net/url"
 	"os"
-	"sort"
 	"strings"
 	"unicode"
 
@@ -240,123 +239,8 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
-	spew.Dump("result", result)
-	spew.Dump("result.Items", result.Items[0])
 
 	return result.Items, nil
-}
-
-func extractURLFromQuery(URL string) string {
-	URL = strings.Replace(URL, "//duckduckgo.com/l/?uddg=", "", 1)
-	URL = strings.Split(URL, "&rut=")[0]
-	urlParsed, err := url.QueryUnescape(URL)
-	if err != nil {
-		return ""
-	}
-	return urlParsed
-}
-
-// generateMockResults generates mock search results for demonstration
-func (gd *GoogleDocking) generateMockResults(query string, maxResults int) []domain.GoogleDockingResult {
-	// In a real implementation, this would make HTTP requests to Google's search API
-	mockResults := []domain.GoogleDockingResult{
-		{
-			URL:         "https://example.com/page1",
-			Title:       "Example Page 1 - " + query,
-			Description: "This is a description containing " + query + " and other relevant information.",
-			Keywords:    []string{query, "example", "page"},
-		},
-		{
-			URL:         "https://example.com/page2",
-			Title:       "Another Example - " + strings.ToUpper(query),
-			Description: "Another description with " + query + " mentioned multiple times for better relevance.",
-			Keywords:    []string{query, "another", "example"},
-		},
-		{
-			URL:         "https://example.com/page3",
-			Title:       "Related Content",
-			Description: "This page discusses topics related to " + query + " and provides additional context.",
-			Keywords:    []string{"related", "content", query},
-		},
-		{
-			URL:         "https://example.com/page4",
-			Title:       "Unrelated Page",
-			Description: "This page doesn't contain the search term and should have low relevance.",
-			Keywords:    []string{"unrelated", "page"},
-		},
-	}
-
-	// Limit results to maxResults
-	if len(mockResults) > maxResults {
-		mockResults = mockResults[:maxResults]
-	}
-
-	return mockResults
-}
-
-// rankResults ranks search results based on relevance scoring
-func (gd *GoogleDocking) rankResults(results []domain.GoogleDockingResult, params domain.GoogleDockingSearchParams) []domain.GoogleDockingResult {
-	for i := range results {
-		results[i].Relevance = gd.calculateRelevance(results[i], params)
-	}
-
-	// Sort by relevance (highest first)
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Relevance > results[j].Relevance
-	})
-
-	// Assign ranks
-	for i := range results {
-		results[i].Rank = i + 1
-	}
-
-	return results
-}
-
-// calculateRelevance calculates the relevance score for a search result
-func (gd *GoogleDocking) calculateRelevance(result domain.GoogleDockingResult, params domain.GoogleDockingSearchParams) float64 {
-	score := 0.0
-	query := params.Query
-
-	if !params.CaseSensitive {
-		query = strings.ToLower(query)
-	}
-
-	// Title relevance (highest weight)
-	titleScore := gd.calculateStringMatch(result.Title, query, params)
-	score += titleScore * 3.0
-
-	// Description relevance (medium weight)
-	descScore := gd.calculateStringMatch(result.Description, query, params)
-	score += descScore * 2.0
-
-	// URL relevance (lower weight)
-	urlScore := gd.calculateStringMatch(result.URL, query, params)
-	score += urlScore * 1.0
-
-	// Keywords relevance
-	keywordScore := gd.calculateKeywordMatch(result.Keywords, query, params)
-	score += keywordScore * 1.5
-
-	// Exact match bonus
-	if params.ExactMatch && gd.hasExactMatch(result, query, params) {
-		score += 2.0
-	}
-
-	// Include keywords bonus
-	if len(params.IncludeKeywords) > 0 {
-		includeBonus := gd.calculateIncludeKeywordsBonus(result, params.IncludeKeywords)
-		score += includeBonus
-	}
-
-	// Exclude keywords penalty
-	if len(params.ExcludeKeywords) > 0 {
-		excludePenalty := gd.calculateExcludeKeywordsPenalty(result, params.ExcludeKeywords)
-		score -= excludePenalty
-	}
-
-	// Normalize score to 0-1 range
-	return math.Min(score/10.0, 1.0)
 }
 
 // calculateStringMatch calculates how well a string matches the query
@@ -457,47 +341,6 @@ func (gd *GoogleDocking) hasExactMatch(result domain.GoogleDockingResult, query 
 	}
 
 	return false
-}
-
-// calculateIncludeKeywordsBonus calculates bonus for including required keywords
-func (gd *GoogleDocking) calculateIncludeKeywordsBonus(result domain.GoogleDockingResult, includeKeywords []string) float64 {
-	bonus := 0.0
-	text := strings.ToLower(result.Title + " " + result.Description)
-
-	for _, keyword := range includeKeywords {
-		if strings.Contains(text, strings.ToLower(keyword)) {
-			bonus += 0.5
-		}
-	}
-
-	return bonus
-}
-
-// calculateExcludeKeywordsPenalty calculates penalty for excluding unwanted keywords
-func (gd *GoogleDocking) calculateExcludeKeywordsPenalty(result domain.GoogleDockingResult, excludeKeywords []string) float64 {
-	penalty := 0.0
-	text := strings.ToLower(result.Title + " " + result.Description)
-
-	for _, keyword := range excludeKeywords {
-		if strings.Contains(text, strings.ToLower(keyword)) {
-			penalty += 1.0
-		}
-	}
-
-	return penalty
-}
-
-// filterByRelevance filters results by minimum relevance threshold
-func (gd *GoogleDocking) filterByRelevance(results []domain.GoogleDockingResult, minRelevance float64) []domain.GoogleDockingResult {
-	filtered := make([]domain.GoogleDockingResult, 0, len(results))
-
-	for _, result := range results {
-		if result.Relevance >= minRelevance {
-			filtered = append(filtered, result)
-		}
-	}
-
-	return filtered
 }
 
 // levenshteinDistance calculates the Levenshtein distance between two strings

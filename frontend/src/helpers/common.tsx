@@ -1,4 +1,4 @@
-import { DomainType } from "../types";
+import type { DomainType } from "../types";
 
 export const getHeaders = (domainType: DomainType) => {
     switch (domainType) {
@@ -8,9 +8,9 @@ export const getHeaders = (domainType: DomainType) => {
         return ['Expediente', 'Sentencia', 'Tribunal', 'Materia', 'Fecha Fallo'];
       case 'pgr':
         return ['Título', 'URL'];
-      case 'google_docking': case 'social_media': case 'file_type': case 'x_social_media':
+      case 'docking': case 'social_media': case 'file_type': case 'x_social_media':
         return ['Título', 'Descripción', 'Relevancia', 'URL'];
       default:
         return [];
     }
-  };    
+  };      

@@ -64,10 +64,6 @@ func (dgi *Dgii) GetDataByCategory(data domain.Register, category domain.Keyword
 			result = append(result, data.NombreComercial)
 		}
 
-		if data.RazonSocial != "" {
-			result = append(result, data.RazonSocial)
-		}
-
 		result = append(result, data.NombreComercial, data.RazonSocial)
 	case domain.KeywordCategoryContributorID:
 		result = append(result, data.RNC)

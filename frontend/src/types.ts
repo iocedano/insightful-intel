@@ -25,7 +25,7 @@ export interface DomainSearchResult {
 
 export interface DynamicPipelineStep {
   id?: string;
-  domain_type: string;
+  domain_type: DomainType;
   search_parameter: string;
   category?: string;
   keywords?: string[];
@@ -37,7 +37,7 @@ export interface DynamicPipelineStep {
 }
 
 export interface DynamicPipelineResult {
-  id?: string;
+  id: string;
   steps: DynamicPipelineStep[];
   total_steps: number;
   successful_steps: number;
@@ -128,5 +128,3 @@ export interface GoogleDockingResult {
   search_rank: number;
   [key: string]: any;
 }
-
-

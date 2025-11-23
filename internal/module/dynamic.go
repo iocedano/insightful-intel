@@ -145,48 +145,14 @@ func SearchMultipleDomains(domainTypes []domain.DomainType, params domain.Domain
 	return results
 }
 
-// DynamicPipelineConfig holds configuration for the dynamic pipeline
-type DynamicPipelineConfig struct {
-	MaxDepth           int
-	MaxConcurrentSteps int
-	DelayBetweenSteps  int // seconds
-	SkipDuplicates     bool
-}
-
 // DefaultDynamicPipelineConfig returns a default configuration
-func DefaultDynamicPipelineConfig() DynamicPipelineConfig {
-	return DynamicPipelineConfig{
+func DefaultDynamicPipelineConfig() domain.DynamicPipelineConfig {
+	return domain.DynamicPipelineConfig{
 		MaxDepth:           5,
 		MaxConcurrentSteps: 10,
 		DelayBetweenSteps:  2,
-		SkipDuplicates:     true,
+		SkipDuplicates:     false,
 	}
-}
-
-// DynamicPipelineStep represents a single step in the pipeline
-type DynamicPipelineStep struct {
-	ID                  domain.ID
-	PipelineID          domain.ID
-	DomainType          domain.DomainType
-	SearchParameter     string
-	Category            domain.KeywordCategory
-	Keywords            []string
-	Success             bool
-	Error               error
-	Output              any
-	KeywordsPerCategory map[domain.KeywordCategory][]string
-	Depth               int
-}
-
-// DynamicPipelineResult represents the complete pipeline result
-type DynamicPipelineResult struct {
-	ID              domain.ID
-	Steps           []DynamicPipelineStep
-	TotalSteps      int
-	SuccessfulSteps int
-	FailedSteps     int
-	MaxDepthReached int
-	Config          DynamicPipelineConfig
 }
 
 // CreateDynamicPipeline creates a dynamic pipeline based on searchable categories
@@ -194,8 +160,8 @@ func CreateDynamicPipeline(
 	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
-	config DynamicPipelineConfig,
-) (*DynamicPipelineResult, error) {
+	config domain.DynamicPipelineConfig,
+) (*domain.DynamicPipelineResult, error) {
 	pipelineID := domain.NewID()
 
 	executionID, _ := infra.GetExecutionID(ctx)
@@ -205,9 +171,9 @@ func CreateDynamicPipeline(
 	}
 
 	// Initialize the pipeline
-	pipeline := &DynamicPipelineResult{
+	pipeline := &domain.DynamicPipelineResult{
 		ID:     pipelineID,
-		Steps:  make([]DynamicPipelineStep, 0),
+		Steps:  make([]domain.DynamicPipelineStep, 0),
 		Config: config,
 	}
 
@@ -229,7 +195,7 @@ func CreateDynamicPipeline(
 
 	for _, domainType := range availableDomains {
 		if category, ok := initialDomainCategories[domainType]; ok {
-			pipeline.Steps = append(pipeline.Steps, DynamicPipelineStep{
+			pipeline.Steps = append(pipeline.Steps, domain.DynamicPipelineStep{
 				DomainType:      domainType,
 				SearchParameter: initialQuery,
 				Category:        category,
@@ -248,10 +214,10 @@ func generateStepsFromKeywords(
 	availableDomains []domain.DomainType,
 	searchedKeywordsPerDomain map[domain.DomainType]map[string]bool,
 	depth int,
-	config DynamicPipelineConfig,
-) []DynamicPipelineStep {
+	config domain.DynamicPipelineConfig,
+) []domain.DynamicPipelineStep {
 
-	var newSteps []DynamicPipelineStep
+	var newSteps []domain.DynamicPipelineStep
 
 	// Get all available domain connectors
 	domainConnectors := make(map[domain.DomainType]any)
@@ -286,7 +252,7 @@ func generateStepsFromKeywords(
 					searchedKeywordsPerDomain[domainType][keyword] = true
 				}
 
-				newStep := DynamicPipelineStep{
+				newStep := domain.DynamicPipelineStep{
 					DomainType:      domainType,
 					SearchParameter: keyword,
 					Category:        category,
@@ -335,8 +301,8 @@ func ExecuteDynamicPipeline(
 	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
-	config DynamicPipelineConfig,
-) (*DynamicPipelineResult, error) {
+	config domain.DynamicPipelineConfig,
+) (*domain.DynamicPipelineResult, error) {
 
 	// Create the pipeline structure
 	pipeline, err := CreateDynamicPipeline(ctx, initialQuery, availableDomains, config)

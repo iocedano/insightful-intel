@@ -115,7 +115,7 @@ func Step[T any](
 }
 
 // convertDynamicPipelineToConnectorPipeline converts DynamicPipelineResult to ConnectorPipeline format
-func convertDynamicPipelineToConnectorPipeline(dynamicResult *module.DynamicPipelineResult) []ConnectorPipeline {
+func convertDynamicPipelineToConnectorPipeline(dynamicResult *domain.DynamicPipelineResult) []ConnectorPipeline {
 	pipeline := make([]ConnectorPipeline, 0, len(dynamicResult.Steps))
 
 	for _, step := range dynamicResult.Steps {
@@ -257,12 +257,20 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx := infra.SetExecutionID(r.Context(), executionID)
-
+	spew.Dump("before set execution id")
+	ctx := infra.SetExecutionID(context.Background(), executionID)
+	spew.Dump("ctx.Err() == context.Canceled", ctx.Err() == context.Canceled)
+	spew.Dump("ctx.Err() == context.DeadlineExceeded", ctx.Err() == context.DeadlineExceeded)
+	spew.Dump("ctx.Err()", ctx.Err())
 	// Start pipeline execution in the background
 	go func() {
 		log.Printf("[%s] Starting background pipeline execution with query: %s, max depth: %d, skip duplicates: %v",
 			executionID, query, maxDepth, skipDuplicates)
+
+		spew.Dump("before execute dynamic pipeline")
+		spew.Dump(ctx.Err() == context.Canceled)
+		spew.Dump(ctx.Err() == context.DeadlineExceeded)
+		spew.Dump(ctx.Err())
 
 		_, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 		if err != nil {
@@ -272,6 +280,10 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}()
 
+	spew.Dump("go func")
+	spew.Dump("ctx.Err() == context.Canceled", ctx.Err() == context.Canceled)
+	spew.Dump("ctx.Err() == context.DeadlineExceeded", ctx.Err() == context.DeadlineExceeded)
+	spew.Dump("ctx.Err()", ctx.Err())
 	// _, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 	// if err != nil {
 	// 	http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)
@@ -305,11 +317,11 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
 	// Create a channel to receive pipeline steps
-	stepChan := make(chan module.DynamicPipelineStep, 100)
+	stepChan := make(chan domain.DynamicPipelineStep, 100)
 	done := make(chan bool)
 
 	// Configure the dynamic pipeline
-	config := module.DynamicPipelineConfig{
+	config := domain.DynamicPipelineConfig{
 		MaxDepth:           maxDepth,
 		MaxConcurrentSteps: 10,
 		DelayBetweenSteps:  2,
@@ -328,7 +340,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 		dynamicResult, err := s.executeDynamicPipelineWithCallback(r.Context(), query, availableDomains, config, stepChan)
 		if err != nil {
 			// Send error as a step
-			errorStep := module.DynamicPipelineStep{
+			errorStep := domain.DynamicPipelineStep{
 				DomainType:      "ERROR",
 				SearchParameter: query,
 				Success:         false,
@@ -341,7 +353,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 		}
 
 		// Send final summary
-		summaryStep := module.DynamicPipelineStep{
+		summaryStep := domain.DynamicPipelineStep{
 			DomainType:      "SUMMARY",
 			SearchParameter: query,
 			Success:         true,
@@ -419,13 +431,13 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 }
 
 // executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
-func (s *Server) executeDynamicPipelineWithCallback(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeDynamicPipelineWithCallback(ctx context.Context, query string, availableDomains []domain.DomainType, config domain.DynamicPipelineConfig, stepChan chan<- domain.DynamicPipelineStep) (*domain.DynamicPipelineResult, error) {
 	// Create a custom pipeline executor that streams steps
 	return s.executeStreamingPipeline(ctx, query, availableDomains, config, stepChan)
 }
 
 // executeStreamingPipeline executes the pipeline with real-time streaming
-func (s *Server) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config domain.DynamicPipelineConfig, stepChan chan<- domain.DynamicPipelineStep) (*domain.DynamicPipelineResult, error) {
 	// Create the initial pipeline steps
 	initialResult, err := module.CreateDynamicPipeline(ctx, query, availableDomains, config)
 	if err != nil {
@@ -447,10 +459,10 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 	}
 
 	// Process steps with streaming
-	processedSteps := make([]module.DynamicPipelineStep, 0)
+	processedSteps := make([]domain.DynamicPipelineStep, 0)
 
 	// Create a queue for steps to process
-	stepQueue := make([]module.DynamicPipelineStep, len(initialSteps))
+	stepQueue := make([]domain.DynamicPipelineStep, len(initialSteps))
 	copy(stepQueue, initialSteps)
 
 	for len(stepQueue) > 0 {
@@ -502,7 +514,7 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 	}
 
 	// Create final result
-	dynamicResult := &module.DynamicPipelineResult{
+	dynamicResult := &domain.DynamicPipelineResult{
 		Steps:           processedSteps,
 		TotalSteps:      totalSteps,
 		SuccessfulSteps: successfulSteps,
@@ -515,8 +527,8 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 }
 
 // generateNextSteps generates new pipeline steps from a completed step
-func (s *Server) generateNextSteps(completedStep module.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config module.DynamicPipelineConfig) []module.DynamicPipelineStep {
-	var newSteps []module.DynamicPipelineStep
+func (s *Server) generateNextSteps(completedStep domain.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config domain.DynamicPipelineConfig) []domain.DynamicPipelineStep {
+	var newSteps []domain.DynamicPipelineStep
 
 	// Extract keywords from the completed step
 	keywordsPerCategory := completedStep.KeywordsPerCategory
@@ -548,7 +560,7 @@ func (s *Server) generateNextSteps(completedStep module.DynamicPipelineStep, ava
 				searchedKeywordsPerDomain[domainType][keyword] = true
 
 				// Create new step
-				newStep := module.DynamicPipelineStep{
+				newStep := domain.DynamicPipelineStep{
 					DomainType:          domainType,
 					SearchParameter:     keyword,
 					Category:            category,
