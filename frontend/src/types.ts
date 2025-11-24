@@ -48,6 +48,8 @@ export interface DynamicPipelineResult {
     max_concurrent_steps: number;
     delay_between_steps: number;
     skip_duplicates: boolean;
+    available_domains: DomainType[];
+    query: string;
   };
 }
 

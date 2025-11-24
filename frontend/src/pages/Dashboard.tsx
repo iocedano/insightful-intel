@@ -161,9 +161,15 @@ export default function Dashboard() {
                 onClick={() => setSelectedPipeline(pipeline.id)}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Pipeline</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Pipeline {pipeline.config.query}</h3>
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                    Depth {pipeline.max_depth_reached}
+                    Depth {pipeline.config.max_depth}
+                  </span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                    Domains {pipeline.config?.available_domains?.join(', ')}
+                  </span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                    Query {pipeline.config?.query}
                   </span>
                 </div>
 

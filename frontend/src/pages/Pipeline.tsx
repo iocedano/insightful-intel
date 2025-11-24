@@ -25,7 +25,7 @@ export default function Pipeline() {
     setError(null);
     setSteps([]);
     setSummary(null);
-    
+
     // Clear any existing polling interval
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -75,8 +75,8 @@ export default function Pipeline() {
     // Fetch immediately
     fetchPipelineResult();
 
-    // Set up polling interval (15 seconds = 15000 milliseconds)
-    pollingIntervalRef.current = setInterval(fetchPipelineResult, 15000);
+    // Set up polling interval (5 seconds = 5000 milliseconds)
+    pollingIntervalRef.current = setInterval(fetchPipelineResult, 5000);
 
     // Cleanup function
     return () => {
@@ -101,7 +101,7 @@ export default function Pipeline() {
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold mb-4">Dynamic Pipeline</h2>
-        
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -193,10 +193,11 @@ export default function Pipeline() {
 
       {pipelineResult && steps?.length && steps.length > 0 && (
         <PipelineDetails
-        pipeline={pipelineResult}
-        steps={steps}
+          pipeline={pipelineResult}
+          steps={steps}
+          showBackButton={false}
         />
-      )} 
+      )}
     </div>
   );
 }

@@ -1,11 +1,18 @@
 import { useState, useMemo } from 'react';
-import type { DynamicPipelineStep, DynamicPipelineResult, GoogleDockingResult, Register, ScjCase, Entity, PgrNews } from '../types';
+import type { DynamicPipelineStep, DynamicPipelineResult, GoogleDockingResult, Register, ScjCase, Entity, PgrNews, DomainType } from '../types';
 import { DOMAIN_TYPE_MAP } from '../types';
+import CardUrlResults from './CardUrlResults';
+import CardDgiiResults from './CardDgiiResults';
+import CardPgrResults from './CardPgrResults';
+import CardScjResults from './CardScjResults';
+import CardOnapiResults from './CardOnapiResults';
+import CardStep from './CardStep';
 
 interface PipelineDetailsProps {
   pipeline: DynamicPipelineResult;
   steps: DynamicPipelineStep[];
   onBack?: () => void;
+  showBackButton?: boolean;
 }
 
 type TabType = 'overview' | 'timeline' | 'results' | 'keywords';
@@ -46,6 +53,10 @@ const aggregateKeywordsByCategory = (steps: DynamicPipelineStep[]) => {
   return result;
 };
 
+const filterStepsByDomainType = (steps: DynamicPipelineStep[], domainType: string) => {
+  return steps.filter((step) => step.domain_type === domainType &&  step.output !== null && step.output.length > 0);
+};
+
 // Helper to extract URLs from step output
 const extractUrls = (output: any): GoogleDockingResult[] => {
   if (!output) return [];
@@ -55,22 +66,14 @@ const extractUrls = (output: any): GoogleDockingResult[] => {
   return [];
 };
 
-// Helper to get domain type display name
-const getDomainTypeDisplay = (domainType: string): string => {
-  return domainType
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-};
-
-export default function PipelineDetails({
-  pipeline,
-  steps,
-  onBack,
-}: PipelineDetailsProps) {
+export default function PipelineDetails(props: PipelineDetailsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedDepths, setExpandedDepths] = useState<Set<number>>(new Set([0]));
+  const steps = props.steps;
+  const pipeline = props.pipeline;
+  const showBackButton = props.showBackButton;
+  const onBack = props.onBack;
 
   const stepsByDepth = useMemo(() => groupStepsByDepth(steps), [steps]);
   const keywordsByCategory = useMemo(() => aggregateKeywordsByCategory(steps), [steps]);
@@ -79,71 +82,19 @@ export default function PipelineDetails({
     [stepsByDepth]
   );
 
-  // Filter steps by domain type
-  const socialMediaSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.SOCIAL_MEDIA.toUpperCase() && step.output !== null
-    ),
-    [steps]
-  );
-
-  const googleDockingSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.GOOGLE_DOCKING.toUpperCase() && step.output !== null
-    ),
-    [steps]
-  );
-
-  const fileTypeSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.FILE_TYPE.toUpperCase() && step.output !== null
-    ),
-    [steps]
-  );
-
-  const xSocialMediaSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.X_SOCIAL_MEDIA.toUpperCase() && step.output !== null
-    ),
-    [steps]
-  );
-
-  const dockingSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.GOOGLE_DOCKING.toUpperCase() && step.output !== null
-    ),
-    [steps]
-  );
-
-  const dgiiSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.DGII.toUpperCase() && step.output !== null && step.output.length > 0
-    ),
-    [steps]
-  );
-
-  const pgrSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.PGR.toUpperCase() && step.output !== null && step.output.length > 0
-    ),
-    [steps]
-  );
-
-  const scjSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.SCJ.toUpperCase() && step.output !== null && step.output.length > 0
-    ),
-    [steps]
-  );
-
-  const onapiSteps = useMemo(
-    () => steps.filter(
-      (step) => step.domain_type === DOMAIN_TYPE_MAP.ONAPI.toUpperCase() && step.output !== null && step.output.length > 0
-    ),
-    [steps]
-  );  
-
-
+  // Compute a mapping of domain type to filtered steps (by output) for quick lookup
+  const domainPerStep = useMemo(() => {
+    return {
+      [DOMAIN_TYPE_MAP.SOCIAL_MEDIA]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.SOCIAL_MEDIA.toUpperCase()),
+      [DOMAIN_TYPE_MAP.GOOGLE_DOCKING]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.GOOGLE_DOCKING.toUpperCase()),
+      [DOMAIN_TYPE_MAP.FILE_TYPE]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.FILE_TYPE.toUpperCase()),
+      [DOMAIN_TYPE_MAP.X_SOCIAL_MEDIA]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.X_SOCIAL_MEDIA.toUpperCase()),
+      [DOMAIN_TYPE_MAP.DGII]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.DGII.toUpperCase()),
+      [DOMAIN_TYPE_MAP.PGR]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.PGR.toUpperCase()),
+      [DOMAIN_TYPE_MAP.SCJ]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.SCJ.toUpperCase()),
+      [DOMAIN_TYPE_MAP.ONAPI]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.ONAPI.toUpperCase()),
+    };
+  }, [steps.length]);
 
   // Filter steps based on search query
   const filteredSteps = useMemo(() => {
@@ -169,402 +120,23 @@ export default function PipelineDetails({
     setExpandedDepths(newExpanded);
   };
 
-  // Render URL results as cards
-  const renderUrlResults = (results: GoogleDockingResult[]) => {
-    if (results.length === 0) return null;
-
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700 mb-2">
-          Results ({results.length})
-        </p>
-        <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
-          {results.map((result, index) => (
-            <a
-              key={index}
-              href={result.link || result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900 truncate mb-1">
-                    {result.title || 'Untitled'}
-                  </h4>
-                  {result.description && (
-                    <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                      {result.description}
-                    </p>
-                  )}
-                  <p className="text-xs text-blue-600 truncate">
-                    {result.link || result.url}
-                  </p>
-                  {result.relevance !== undefined && (
-                    <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
-                      Relevance: {result.relevance.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-                <svg
-                  className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDgiiResults = (results: Register[]) => {
-    if (results.length === 0) return null;
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700 mb-3">
-          Results ({results.length})
-        </p>
-        <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-          {results.map((result, index) => (
-            <div
-              key={result.id || index}
-              className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                      {result.razon_social || 'N/A'}
-                    </h4>
-                    {result.nombre_comercial && (
-                      <p className="text-xs text-gray-600 mb-2">
-                        Commercial Name: <span className="font-medium text-gray-900">{result.nombre_comercial}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-gray-500">RNC:</span>{' '}
-                    <span className="font-medium text-gray-900">{result.rnc || 'N/A'}</span>
-                  </div>
-                  {result.categoria && (
-                    <div>
-                      <span className="text-gray-500">Category:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.categoria}</span>
-                    </div>
-                  )}
-                  {result.estado && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Status:</span>{' '}
-                      <span
-                        className={`font-medium px-2 py-0.5 rounded ${
-                          result.estado.toLowerCase().includes('activo')
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {result.estado}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderPgrResults = (results: PgrNews[]) => {
-    if (results.length === 0) return null;
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700 mb-3">
-          Results ({results.length})
-        </p>
-        <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-          {results.map((result, index) => (
-            <a
-              key={result.id || index}
-              href={result.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {result.title || 'Untitled Article'}
-                  </h4>
-                  <p className="text-xs text-blue-600 truncate">
-                    {result.url}
-                  </p>
-                </div>
-                <svg
-                  className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </div>
-            </a>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderScjResults = (results: ScjCase[]) => {
-    if (results.length === 0) return null;
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700 mb-3">
-        Results ({results.length})
-        </p>
-        <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-          {results.map((result, index) => (
-            <div
-              key={result.id || index}
-              className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-sm font-semibold text-gray-900">
-                        Case #{result.no_expediente || result.id_expediente || 'N/A'}
-                      </h4>
-                      {result.no_sentencia && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
-                          Sentence: {result.no_sentencia}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                  {result.id_expediente && (
-                    <div>
-                      <span className="text-gray-500">Expediente ID:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.id_expediente}</span>
-                    </div>
-                  )}
-                  {result.fecha_fallo && (
-                    <div>
-                      <span className="text-gray-500">Date:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.fecha_fallo}</span>
-                    </div>
-                  )}
-                  {result.desc_tribunal && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Court:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.desc_tribunal}</span>
-                    </div>
-                  )}
-                  {result.desc_materia && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Subject:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.desc_materia}</span>
-                    </div>
-                  )}
-                  {result.involucrados && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Involved Parties:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.involucrados}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderOnapiResults = (results: Entity[]) => {
-    if (results.length === 0) return null;
-    return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-700 mb-3">
-        Results ({results.length})
-        </p>
-        <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-          {results.map((result, index) => (
-            <div
-              key={result.id || index}
-              className="p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="text-sm font-semibold text-gray-900">
-                        {result.serie_expediente}-{result.numero_expediente}
-                      </h4>
-                      {result.certificado && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded">
-                          Cert: {result.certificado}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                  {result.tipo && (
-                    <div>
-                      <span className="text-gray-500">Type:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.tipo}</span>
-                    </div>
-                  )}
-                  {result.subtipo && (
-                    <div>
-                      <span className="text-gray-500">Subtype:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.subtipo}</span>
-                    </div>
-                  )}
-                  {result.titular && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Holder:</span>{' '}
-                      <span className="font-medium text-gray-900">{result.titular}</span>
-                    </div>
-                  )}
-                  {result.texto && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Description:</span>
-                      <p className="mt-1 text-gray-900 line-clamp-3">{result.texto}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-  // Render step card
-  const renderStepCard = (step: DynamicPipelineStep, showDetails = true) => {
-    const results = extractUrls(step.output);
-    const hasResults = results.length > 0;
-
-    return (
-      <div
-        key={step.id}
-        className={`p-4 border rounded-lg transition-all ${
-          step.success
-            ? 'border-green-300 bg-green-50/50 hover:bg-green-50'
-            : 'border-red-300 bg-red-50/50 hover:bg-red-50'
-        }`}
-      >
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2 flex-1">
-            <span className="font-semibold text-gray-900 text-sm">
-              {getDomainTypeDisplay(step.domain_type)}
-            </span>
-            <span
-              className={`px-2 py-1 text-xs rounded-full ${
-                step.success
-                  ? 'bg-green-200 text-green-800'
-                  : 'bg-red-200 text-red-800'
-              }`}
-            >
-              {step.success ? '✓ Success' : '✗ Failed'}
-            </span>
-            {step.depth !== undefined && (
-              <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded">
-                Depth {step.depth}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm text-gray-700">
-            <span className="font-medium">Query:</span>{' '}
-            <span className="text-gray-900">{step.search_parameter}</span>
-          </p>
-
-          {step.error && (
-            <div className="p-2 bg-red-100 border border-red-300 rounded text-sm text-red-800">
-              <span className="font-medium">Error:</span> {step.error}
-            </div>
-          )}
-
-          {showDetails && step.keywords && step.keywords.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-gray-700 mb-1">Keywords:</p>
-              <div className="flex flex-wrap gap-1">
-                {step.keywords.map((keyword, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {showDetails &&
-            step.keywords_per_category &&
-            Object.keys(step.keywords_per_category).length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-gray-700 mb-1">Keywords by Category:</p>
-                <div className="space-y-1">
-                  {Object.entries(step.keywords_per_category).map(([category, keywords]) => (
-                    <div key={category}>
-                      <span className="text-xs font-medium text-gray-600 capitalize">
-                        {category.replace(/_/g, ' ')}:
-                      </span>{' '}
-                      <div className="inline-flex flex-wrap gap-1">
-                        {keywords.map((kw, idx) => (
-                          <span
-                            key={idx}
-                            className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-xs rounded"
-                          >
-                            {kw}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          {hasResults && showDetails && renderUrlResults(results)}
-        </div>
-      </div>
-    );
-  };
 
   const tabs: { id: TabType; label: string; count?: number }[] = [
     { id: 'overview', label: 'Overview' },
-    { id: 'timeline', label: 'Timeline', count: steps.length },
+    { id: 'timeline', label: 'Steps', count: steps.length },
     { id: 'results', label: 'Results' },
     { id: 'keywords', label: 'Keywords', count: Object.keys(keywordsByCategory).length },
   ];
+
+  const dockingSteps = domainPerStep[DOMAIN_TYPE_MAP.GOOGLE_DOCKING];
+  const dgiiSteps = domainPerStep[DOMAIN_TYPE_MAP.DGII];
+  const pgrSteps = domainPerStep[DOMAIN_TYPE_MAP.PGR];
+  const scjSteps = domainPerStep[DOMAIN_TYPE_MAP.SCJ];
+  const onapiSteps = domainPerStep[DOMAIN_TYPE_MAP.ONAPI];
+  const socialMediaSteps = domainPerStep[DOMAIN_TYPE_MAP.SOCIAL_MEDIA];
+  const xSocialMediaSteps = domainPerStep[DOMAIN_TYPE_MAP.X_SOCIAL_MEDIA];
+  const fileTypeSteps = domainPerStep[DOMAIN_TYPE_MAP.FILE_TYPE];
+  const googleDockingSteps = domainPerStep[DOMAIN_TYPE_MAP.GOOGLE_DOCKING];
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
@@ -575,13 +147,18 @@ export default function PipelineDetails({
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Pipeline Details</h1>
               <p className="text-sm text-gray-500 mt-1">Execution ID: {pipeline.id}</p>
+              <p className="text-sm text-gray-500 mt-1">Query: {pipeline.config?.query}</p>
+              <p className="text-sm text-gray-500 mt-1">Domains: {pipeline.config?.available_domains?.join(', ')}</p>
+              <p className="text-sm text-gray-500 mt-1">Max Depth: {pipeline.config?.max_depth}</p>
             </div>
-            <button
-              onClick={onBack}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-            >
-              ← Back to Dashboard
-            </button>
+            {showBackButton && (
+              <button
+                onClick={onBack}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              >
+                ← Back to Dashboard
+              </button>
+            )}
           </div>
 
           {/* Summary Stats */}
@@ -686,6 +263,41 @@ export default function PipelineDetails({
               <div>
                 <h2 className="text-xl font-bold mb-4 text-gray-900">Results Summary</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {dockingSteps.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-blue-900 mb-2">Google Docking</h3>
+                      <p className="text-2xl font-bold text-blue-700">{dockingSteps.length}</p>
+                      <p className="text-sm text-blue-600">steps with results</p>
+                    </div>
+                  )}
+                  {dgiiSteps.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-green-900 mb-2">Dirección General de Impuestos Internos (DGII)</h3>
+                      <p className="text-2xl font-bold text-green-700">{dgiiSteps.length}</p>
+                      <p className="text-sm text-green-600">steps with results</p>
+                    </div>
+                  )}
+                  {pgrSteps.length > 0 && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-purple-900 mb-2">Ministerio de Procuraduría General de la República (PGR)</h3>
+                      <p className="text-2xl font-bold text-purple-700">{pgrSteps.length}</p>
+                      <p className="text-sm text-purple-600">steps with results</p>
+                    </div>
+                  )}
+                  {scjSteps.length > 0 && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-orange-900 mb-2">Sala de Casación de la Suprema Corte de Justicia (SCJ)</h3>
+                      <p className="text-2xl font-bold text-orange-700">{scjSteps.length}</p>
+                      <p className="text-sm text-orange-600">steps with results</p>
+                    </div>
+                  )}
+                  {onapiSteps.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-red-900 mb-2">Oficina Nacional de la Propiedad Industrial (ONAPI)</h3>
+                      <p className="text-2xl font-bold text-red-700">{onapiSteps.length}</p>
+                      <p className="text-sm text-red-600">steps with results</p>
+                    </div>
+                  )}
                   {socialMediaSteps.length > 0 && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <h3 className="font-semibold text-blue-900 mb-2">Social Media</h3>
@@ -786,7 +398,9 @@ export default function PipelineDetails({
 
                       {isExpanded && (
                         <div className="p-4 space-y-3 bg-white">
-                          {depthSteps.map((step) => renderStepCard(step))}
+                          {depthSteps.map((step) => (
+                            <CardStep key={step.id} step={step} />
+                          ))}
                         </div>
                       )}
                     </div>
@@ -817,7 +431,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderUrlResults(results)}
+                          <CardUrlResults results={results} />
                         </div>
                       );
                     })}
@@ -835,7 +449,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderDgiiResults(step.output as Register[])}
+                          <CardDgiiResults results={step.output as Register[]} />
                         </div>
                       );
                     })}
@@ -853,7 +467,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderPgrResults(step.output as PgrNews[])}
+                          <CardPgrResults results={step.output as PgrNews[]} />
                         </div>
                       );
                     })}   
@@ -871,7 +485,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderScjResults(step.output as ScjCase[])}
+                          <CardScjResults results={step.output as ScjCase[]} />
                         </div>
                       );
                     })}
@@ -889,7 +503,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderOnapiResults(step.output as Entity[])}
+                          <CardOnapiResults results={step.output as Entity[]} />
                         </div>
                       );
                     })}
@@ -909,7 +523,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderUrlResults(results)}
+                          <CardUrlResults results={results} />
                         </div>
                       );
                     })}
@@ -929,7 +543,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderUrlResults(results)}
+                          <CardUrlResults results={results} />
                         </div>
                       );
                     })}
@@ -949,7 +563,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderUrlResults(results)}
+                          <CardUrlResults results={results} />
                         </div>
                       );
                     })}
@@ -969,7 +583,7 @@ export default function PipelineDetails({
                           <p className="text-sm font-medium text-gray-700 mb-3">
                             Query: <span className="text-gray-900">{step.search_parameter}</span>
                           </p>
-                          {renderUrlResults(results)}
+                          <CardUrlResults results={results} />
                         </div>
                       );
                     })}

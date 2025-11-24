@@ -2,10 +2,12 @@ package domain
 
 // DynamicPipelineConfig holds configuration for the dynamic pipeline
 type DynamicPipelineConfig struct {
-	MaxDepth           int  `json:"max_depth"`
-	MaxConcurrentSteps int  `json:"max_concurrent_steps"`
-	DelayBetweenSteps  int  `json:"delay_between_steps"`
-	SkipDuplicates     bool `json:"skip_duplicates"`
+	Query              string       `json:"query"`
+	MaxDepth           int          `json:"max_depth"`
+	MaxConcurrentSteps int          `json:"max_concurrent_steps"`
+	DelayBetweenSteps  int          `json:"delay_between_steps"`
+	SkipDuplicates     bool         `json:"skip_duplicates"`
+	AvailableDomains   []DomainType `json:"available_domains"`
 }
 
 // DynamicPipelineStep represents a single step in the pipeline

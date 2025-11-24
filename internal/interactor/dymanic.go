@@ -33,16 +33,18 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 	stepChan := make(chan domain.DynamicPipelineStep, 100)
 	done := make(chan bool)
 
+	// Available domains
+	availableDomains := domain.AllDomainTypes()
+
 	// Configure the dynamic pipeline
 	config := domain.DynamicPipelineConfig{
+		Query:              query,
 		MaxDepth:           maxDepth,
 		MaxConcurrentSteps: 10,
 		DelayBetweenSteps:  2,
 		SkipDuplicates:     skipDuplicates,
+		AvailableDomains:   availableDomains,
 	}
-
-	// Available domains
-	availableDomains := domain.AllDomainTypes()
 
 	// Start pipeline execution in a goroutine
 	go func() {
@@ -76,6 +78,7 @@ func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, 
 				"successful_steps":  dynamicResult.SuccessfulSteps,
 				"failed_steps":      dynamicResult.FailedSteps,
 				"max_depth_reached": dynamicResult.MaxDepthReached,
+				"query":             query,
 			},
 			Depth: dynamicResult.MaxDepthReached,
 		}
