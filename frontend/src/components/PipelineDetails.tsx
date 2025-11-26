@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { DynamicPipelineStep, DynamicPipelineResult, GoogleDockingResult, Register, ScjCase, Entity, PgrNews, DomainType } from '../types';
+import type { DynamicPipelineStep, DynamicPipelineResult, GoogleDockingResult, Register, ScjCase, Entity, PgrNews } from '../types';
 import { DOMAIN_TYPE_MAP } from '../types';
 import CardUrlResults from './CardUrlResults';
 import CardDgiiResults from './CardDgiiResults';
