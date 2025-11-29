@@ -5,10 +5,11 @@ package module
 import (
 	"encoding/json"
 	"fmt"
-	"insightful-intel/internal/domain"
 	"insightful-intel/internal/custom"
+	"insightful-intel/internal/domain"
 	"io"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -94,6 +95,17 @@ func (p *Scj) GetDataByCategory(data domain.ScjCase, category domain.KeywordCate
 
 	switch category {
 	case domain.KeywordCategoryPersonName:
+		// Split by comma or "vs" (case-insensitive) with optional spaces
+		re := regexp.MustCompile(`(?i)\s*,\s*|\s+vs\s*|\s+vs.\s*|\s+vs\s*|\s+vs.\s*`)
+		// trim the data.Involucrados
+		involucrados := strings.TrimSpace(data.Involucrados)
+		names := re.Split(involucrados, -1)
+		for _, name := range names {
+			trimmed := strings.TrimSpace(name)
+			if trimmed != "" {
+				result = append(result, trimmed)
+			}
+		}
 		result = append(result, data.Involucrados)
 	}
 

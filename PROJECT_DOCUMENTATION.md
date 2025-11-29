@@ -26,7 +26,6 @@ The platform automates the process of gathering intelligence from multiple publi
 - **Social Media** - Social media platform searches
 - **File Type Searches** - Document and file searches
 
-### Problem Statement
 Traditional investigative work requires manually searching multiple government databases and websites, which is time-consuming, error-prone, and often misses connections between entities. This platform automates this process by:
 1. Starting with a single search query (e.g., a company name or RNC)
 2. Extracting relevant keywords from search results

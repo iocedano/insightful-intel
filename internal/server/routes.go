@@ -609,7 +609,7 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 // Google Docking handlers
 
-func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -650,10 +650,10 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create Google Docking connector
-	googleDocking := module.NewGoogleDockingDomain()
+	googleDorking := module.NewGoogleDorkingDomain()
 
 	// Create search parameters
-	params := domain.GoogleDockingSearchParams{
+	params := domain.GoogleDorkingSearchParams{
 		Query:           query,
 		MaxResults:      maxResults,
 		MinRelevance:    minRelevance,
@@ -664,14 +664,14 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform search
-	results, err := googleDocking.SearchWithParams(params)
+	results, err := googleDorking.SearchWithParams(params)
 	if err != nil {
 		http.Error(w, "Search failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get statistics
-	stats := googleDocking.GetSearchStatistics(results)
+	stats := googleDorking.GetSearchStatistics(results)
 
 	// Create response
 	response := map[string]interface{}{
@@ -694,7 +694,7 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -706,8 +706,8 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	googleDocking := module.NewGoogleDockingDomain()
-	suggestions, err := googleDocking.GetSearchSuggestions(query)
+	googleDorking := module.NewGoogleDorkingDomain()
+	suggestions, err := googleDorking.GetSearchSuggestions(query)
 	if err != nil {
 		http.Error(w, "Failed to get suggestions: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -724,14 +724,14 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(response)
 }
 
-func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var request struct {
-		Results []domain.GoogleDockingResult `json:"results"`
+		Results []domain.GoogleDorkingResult `json:"results"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -739,8 +739,8 @@ func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	googleDocking := module.NewGoogleDockingDomain()
-	stats := googleDocking.GetSearchStatistics(request.Results)
+	googleDorking := module.NewGoogleDorkingDomain()
+	stats := googleDorking.GetSearchStatistics(request.Results)
 
 	response := map[string]interface{}{
 		"success":       true,

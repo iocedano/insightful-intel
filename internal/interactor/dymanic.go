@@ -6,6 +6,7 @@ import (
 	"insightful-intel/internal/module"
 	"insightful-intel/internal/repositories"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -238,10 +239,10 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 					return nil, err
 				}
 			}
-		case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
-			results, ok := created.Output.([]domain.GoogleDockingResult)
+		case domain.DomainTypeGoogleDorking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
+			results, ok := created.Output.([]domain.GoogleDorkingResult)
 			if !ok {
-				log.Println("Error casting result output to []domain.GoogleDockingResult ", err)
+				log.Println("Error casting result output to []domain.GoogleDorkingResult ", err)
 				return nil, err
 			}
 			for _, result := range results {
@@ -295,7 +296,11 @@ func (d *DynamicPipelineInteractor) executeStreamingPipeline(ctx context.Context
 	return createdPipelineResult, nil
 }
 
-func (*DynamicPipelineInteractor) generateNextSteps(completedStep domain.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config domain.DynamicPipelineConfig) []domain.DynamicPipelineStep {
+func (*DynamicPipelineInteractor) generateNextSteps(
+	completedStep domain.DynamicPipelineStep,
+	availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool,
+	_ domain.DynamicPipelineConfig,
+) []domain.DynamicPipelineStep {
 	var newSteps []domain.DynamicPipelineStep
 
 	// Extract keywords from the completed step
@@ -311,9 +316,13 @@ func (*DynamicPipelineInteractor) generateNextSteps(completedStep domain.Dynamic
 			if len(keyword) < 3 {
 				continue
 			}
-
 			// Generate steps for each available domain
 			for _, domainType := range availableDomains {
+				searchableCategories := GetSearchableKeywordCategories(domainType)
+				if !slices.Contains(searchableCategories, category) {
+					continue
+				}
+
 				// Skip if already searched this keyword for this domain
 				if searchedKeywordsPerDomain[domainType][keyword] {
 					continue
@@ -339,6 +348,7 @@ func (*DynamicPipelineInteractor) generateNextSteps(completedStep domain.Dynamic
 					KeywordsPerCategory: nil,
 					Depth:               completedStep.Depth + 1,
 				}
+			
 
 				newSteps = append(newSteps, newStep)
 			}
@@ -346,4 +356,21 @@ func (*DynamicPipelineInteractor) generateNextSteps(completedStep domain.Dynamic
 	}
 
 	return newSteps
+}
+
+func GetSearchableKeywordCategories(domainEntities domain.DomainType) []domain.KeywordCategory {
+	switch domainEntities {
+	case domain.DomainTypeONAPI:
+		return module.GetSearchableKeywordCategories(&module.Onapi{})
+	case domain.DomainTypeSCJ:
+		return module.GetSearchableKeywordCategories(&module.Scj{})
+	case domain.DomainTypeDGII:
+		return module.GetSearchableKeywordCategories(&module.Dgii{})
+	case domain.DomainTypePGR:
+		return module.GetSearchableKeywordCategories(&module.Pgr{})
+	case domain.DomainTypeGoogleDorking:
+		return module.GetSearchableKeywordCategories(&module.GoogleDorking{})
+	default:
+		return []domain.KeywordCategory{}
+	}
 }
