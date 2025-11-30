@@ -6,6 +6,7 @@ import (
 	"insightful-intel/internal/module"
 	"insightful-intel/internal/repositories"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -317,10 +318,10 @@ func (*DynamicPipelineInteractor) generateNextSteps(
 			}
 			// Generate steps for each available domain
 			for _, domainType := range availableDomains {
-				// searchableCategories := GetSearchableKeywordCategories(domainType)
-				// if !slices.Contains(searchableCategories, category) {
-				// 	continue
-				// }
+				searchableCategories := GetSearchableKeywordCategories(domainType)
+				if !slices.Contains(searchableCategories, category) {
+					continue
+				}
 
 				// Skip if already searched this keyword for this domain
 				if searchedKeywordsPerDomain[domainType][keyword] {

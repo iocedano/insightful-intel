@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"insightful-intel/internal/database"
 	"insightful-intel/internal/domain"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -181,7 +182,7 @@ func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, i
 
 	var result domain.DynamicPipelineResult
 	var configJSON string
-
+	var createdAt, updatedAt string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&result.ID,
 		&result.TotalSteps,
@@ -189,8 +190,8 @@ func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, i
 		&result.FailedSteps,
 		&result.MaxDepthReached,
 		&configJSON,
-		new(interface{}), // created_at, ignored
-		new(interface{}), // updated_at, ignored
+		&createdAt,
+		&updatedAt,
 	)
 
 	if err != nil {
@@ -198,6 +199,8 @@ func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, i
 	}
 
 	json.Unmarshal([]byte(configJSON), &result.Config)
+	result.CreatedAt, _ = time.Parse(time.DateTime, createdAt)
+	result.UpdatedAt, _ = time.Parse(time.DateTime, updatedAt)
 
 	// Get steps
 	steps, err := r.GetPipelineStepsByID(ctx, id)
@@ -358,6 +361,7 @@ func (r *PipelineRepository) List(ctx context.Context, offset, limit int) ([]*do
 	for rows.Next() {
 		var result domain.DynamicPipelineResult
 		var configJSON string
+		var createdAt, updatedAt string
 		// Need to scan all the columns selected in the query
 		err := rows.Scan(
 			&result.ID,
@@ -365,16 +369,17 @@ func (r *PipelineRepository) List(ctx context.Context, offset, limit int) ([]*do
 			&result.SuccessfulSteps,
 			&result.FailedSteps,
 			&result.MaxDepthReached,
-			&configJSON,      // config
-			new(interface{}), // created_at (ignored)
-			new(interface{}), // updated_at (ignored)
+			&configJSON, // config
+			&createdAt,  // created_at
+			&updatedAt,  // updated_at
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		json.Unmarshal([]byte(configJSON), &result.Config)
-
+		result.CreatedAt, _ = time.Parse(time.DateTime, createdAt)
+		result.UpdatedAt, _ = time.Parse(time.DateTime, updatedAt)
 		results = append(results, &result)
 	}
 

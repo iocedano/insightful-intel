@@ -150,6 +150,9 @@ function PipelineDetails(props: PipelineDetailsProps) {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Pipeline Details</h1>
               <p className="text-sm text-gray-500 mt-1">Execution ID: {pipeline.id}</p>
+              <p className="text-sm text-gray-500 mt-1">Created At: {new Date(pipeline.created_at).toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">Updated At: {new Date(pipeline.updated_at).toLocaleString()}</p>
+              <p className="text-sm text-gray-500 mt-1">Duration: {Math.round((new Date(pipeline.updated_at).getTime() - new Date(pipeline.created_at).getTime()) / 60000)} minutes</p>
               <p className="text-sm text-gray-500 mt-1">Query: {pipeline.config?.query}</p>
               <p className="text-sm text-gray-500 mt-1">Domains: {pipeline.config?.available_domains?.join(', ')}</p>
               <p className="text-sm text-gray-500 mt-1">Max Depth: {pipeline.config?.max_depth}</p>
@@ -184,10 +187,10 @@ function PipelineDetails(props: PipelineDetailsProps) {
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
               <p className="text-xs md:text-sm text-red-700 font-medium mb-1">Failed</p>
               <p className="text-xl md:text-2xl font-bold text-red-900">
-              {pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length}
+              {pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length || 0}
               </p>
               <p className="text-xs text-red-600 mt-1">
-                {pipeline.total_steps > 0
+                {pipeline?.failed_steps && pipeline?.total_steps > 0
                   ? Math.round((pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length) / (pipeline?.total_steps || pipeline?.steps?.length)) * 100
                   : 0}%
               </p>

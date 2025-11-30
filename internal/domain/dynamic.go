@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // DynamicPipelineConfig holds configuration for the dynamic pipeline
 type DynamicPipelineConfig struct {
 	Query              string       `json:"query"`
@@ -28,6 +30,8 @@ type DynamicPipelineStep struct {
 // DynamicPipelineResult represents the complete pipeline result
 type DynamicPipelineResult struct {
 	ID              ID                    `json:"id"`
+	CreatedAt       time.Time             `json:"created_at"`
+	UpdatedAt       time.Time             `json:"updated_at"`
 	Steps           []DynamicPipelineStep `json:"steps"`
 	TotalSteps      int                   `json:"total_steps"`
 	SuccessfulSteps int                   `json:"successful_steps"`

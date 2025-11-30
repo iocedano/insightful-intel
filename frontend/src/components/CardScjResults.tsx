@@ -63,7 +63,7 @@ export default function CardScjResults({ results }: CardScjResultsProps) {
                     <span className="font-medium text-gray-900">{result.involucrados}</span>
                   </div>
                 )}
-                {result.url_blob && (
+                {/* {result.url_blob && ( */}
                   <div>
                     <span className="text-gray-500">URL:</span>{' '}
                     <a
@@ -75,7 +75,7 @@ export default function CardScjResults({ results }: CardScjResultsProps) {
                       {result.url_blob.split('/').pop() || 'No URL'}
                     </a>
                   </div>
-                )}
+                {/* )} */}
               </div>
             </div>
           </div>

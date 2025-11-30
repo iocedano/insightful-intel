@@ -39,6 +39,8 @@ export interface DynamicPipelineStep {
 export interface DynamicPipelineResult {
   id: string;
   steps: DynamicPipelineStep[];
+  created_at: Date;
+  updated_at: Date;
   total_steps: number;
   successful_steps: number;
   failed_steps: number;
