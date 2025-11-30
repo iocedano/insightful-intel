@@ -35,6 +35,10 @@ services:
       MYSQL_USER: ${BLUEPRINT_DB_USERNAME}
       MYSQL_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_ROOT_HOST: "%"
+    command:
+      - "--sort_buffer_size=1073741824"
     ports:
       - "${BLUEPRINT_DB_PORT}:3306"
     volumes:

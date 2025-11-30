@@ -130,7 +130,7 @@ func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
 		"texto":    query,
 		"tipo":     "",
 		"clases":   "",
-		"pageSize": "1000",
+		"pageSize": "50",
 		"pageIdx":  "1",
 	}, map[string]string{
 		"Content-Type":    "application/json",

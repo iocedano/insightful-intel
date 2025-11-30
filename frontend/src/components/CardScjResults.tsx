@@ -63,6 +63,19 @@ export default function CardScjResults({ results }: CardScjResultsProps) {
                     <span className="font-medium text-gray-900">{result.involucrados}</span>
                   </div>
                 )}
+                {result.url_blob && (
+                  <div>
+                    <span className="text-gray-500">URL:</span>{' '}
+                    <a
+                      href={result.url_blob}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
+                    >
+                      {result.url_blob.split('/').pop() || 'No URL'}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
