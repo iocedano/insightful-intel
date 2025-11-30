@@ -200,7 +200,7 @@ func (r *PipelineRepository) getDynamicPipelineResultByID(ctx context.Context, i
 	json.Unmarshal([]byte(configJSON), &result.Config)
 
 	// Get steps
-	steps, err := r.getPipelineSteps(ctx, id)
+	steps, err := r.GetPipelineStepsByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -247,57 +247,6 @@ func (r *PipelineRepository) GetPipelineStepsByID(ctx context.Context, id string
 
 		step.DomainType = domain.DomainType(domainType)
 		step.Category = domain.KeywordCategory(category)
-		if errorMessage != "" {
-			step.Error = fmt.Errorf(errorMessage)
-		}
-		json.Unmarshal([]byte(keywordsJSON), &step.Keywords)
-		json.Unmarshal([]byte(outputJSON), &step.Output)
-		json.Unmarshal([]byte(keywordsPerCategoryJSON), &step.KeywordsPerCategory)
-
-		steps = append(steps, step)
-	}
-
-	return steps, nil
-}
-
-// getPipelineSteps retrieves steps for a pipeline result
-func (r *PipelineRepository) getPipelineSteps(ctx context.Context, pipelineID string) ([]domain.DynamicPipelineStep, error) {
-	query := `
-		SELECT id, domain_type, search_parameter, category, keywords, success, error_message, 
-			   output, keywords_per_category, depth, created_at
-		FROM dynamic_pipeline_steps 
-		WHERE pipeline_id = ?
-		ORDER BY created_at ASC
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, pipelineID)
-	if err != nil {
-		return []domain.DynamicPipelineStep{}, err
-	}
-	defer rows.Close()
-
-	var steps []domain.DynamicPipelineStep
-	for rows.Next() {
-		var step domain.DynamicPipelineStep
-		var domainType, category, keywordsJSON, outputJSON, keywordsPerCategoryJSON, errorMessage string
-
-		err := rows.Scan(
-			&step.ID,
-			&domainType,              // domain_type
-			&step.SearchParameter,    // search_parameter
-			&category,                // category
-			&keywordsJSON,            // keywords
-			&step.Success,            // success
-			&errorMessage,            // error_message
-			&outputJSON,              // output
-			&keywordsPerCategoryJSON, // keywords_per_category
-			&step.Depth,              // depth
-			new(interface{}),         // created_at, ignored
-		)
-		if err != nil {
-			return nil, err
-		}
-
 		if errorMessage != "" {
 			step.Error = fmt.Errorf(errorMessage)
 		}

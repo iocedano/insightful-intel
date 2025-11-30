@@ -6,7 +6,6 @@ import (
 	"insightful-intel/internal/module"
 	"insightful-intel/internal/repositories"
 	"log"
-	"slices"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -318,10 +317,10 @@ func (*DynamicPipelineInteractor) generateNextSteps(
 			}
 			// Generate steps for each available domain
 			for _, domainType := range availableDomains {
-				searchableCategories := GetSearchableKeywordCategories(domainType)
-				if !slices.Contains(searchableCategories, category) {
-					continue
-				}
+				// searchableCategories := GetSearchableKeywordCategories(domainType)
+				// if !slices.Contains(searchableCategories, category) {
+				// 	continue
+				// }
 
 				// Skip if already searched this keyword for this domain
 				if searchedKeywordsPerDomain[domainType][keyword] {
@@ -348,7 +347,6 @@ func (*DynamicPipelineInteractor) generateNextSteps(
 					KeywordsPerCategory: nil,
 					Depth:               completedStep.Depth + 1,
 				}
-			
 
 				newSteps = append(newSteps, newStep)
 			}
@@ -368,7 +366,7 @@ func GetSearchableKeywordCategories(domainEntities domain.DomainType) []domain.K
 		return module.GetSearchableKeywordCategories(&module.Dgii{})
 	case domain.DomainTypePGR:
 		return module.GetSearchableKeywordCategories(&module.Pgr{})
-	case domain.DomainTypeGoogleDorking:
+	case domain.DomainTypeGoogleDorking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
 		return module.GetSearchableKeywordCategories(&module.GoogleDorking{})
 	default:
 		return []domain.KeywordCategory{}

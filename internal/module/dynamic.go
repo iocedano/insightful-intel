@@ -191,6 +191,9 @@ func CreateDynamicPipeline(
 		domain.DomainTypePGR:           domain.KeywordCategoryPersonName,
 		domain.DomainTypeSCJ:           domain.KeywordCategoryContributorID,
 		domain.DomainTypeGoogleDorking: domain.KeywordCategoryCompanyName,
+		domain.DomainTypeSocialMedia:   domain.KeywordCategoryCompanyName,
+		domain.DomainTypeFileType:      domain.KeywordCategoryCompanyName,
+		domain.DomainTypeXSocialMedia:  domain.KeywordCategoryCompanyName,
 	}
 
 	for _, domainType := range availableDomains {
@@ -232,11 +235,11 @@ func generateStepsFromKeywords(
 	// For each category and its keywords
 	for category, keywords := range keywordsPerCategory {
 		// Find domains that can search this category
-		for domainType, connector := range domainConnectors {
-			searchableCategories := GetSearchableKeywordCategories(connector)
-			if !contains(searchableCategories, category) {
-				continue
-			}
+		for domainType, _ := range domainConnectors {
+			// searchableCategories := GetSearchableKeywordCategories(connector)
+			// if !contains(searchableCategories, category) {
+			// 	continue
+			// }
 
 			// Create steps for each keyword
 			for _, keyword := range keywords {

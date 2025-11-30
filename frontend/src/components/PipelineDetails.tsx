@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { DynamicPipelineStep, DynamicPipelineResult, GoogleDockingResult, Register, ScjCase, Entity, PgrNews } from '../types';
 import { DOMAIN_TYPE_MAP } from '../types';
 import CardUrlResults from './CardUrlResults';
@@ -66,7 +66,9 @@ const extractUrls = (output: any): GoogleDockingResult[] => {
   return [];
 };
 
-export default function PipelineDetails(props: PipelineDetailsProps) {
+
+
+function PipelineDetails(props: PipelineDetailsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedDepths, setExpandedDepths] = useState<Set<number>>(new Set([0]));
@@ -84,6 +86,7 @@ export default function PipelineDetails(props: PipelineDetailsProps) {
 
   // Compute a mapping of domain type to filtered steps (by output) for quick lookup
   const domainPerStep = useMemo(() => {
+    console.log('domainPerStep', steps.length);
     return {
       [DOMAIN_TYPE_MAP.SOCIAL_MEDIA]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.SOCIAL_MEDIA.toUpperCase()),
       [DOMAIN_TYPE_MAP.GOOGLE_DOCKING]: filterStepsByDomainType(steps, DOMAIN_TYPE_MAP.GOOGLE_DOCKING.toUpperCase()),
@@ -169,25 +172,31 @@ export default function PipelineDetails(props: PipelineDetailsProps) {
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
               <p className="text-xs md:text-sm text-green-700 font-medium mb-1">Successful</p>
-              <p className="text-xl md:text-2xl font-bold text-green-900">{pipeline.successful_steps}</p>
+              <p className="text-xl md:text-2xl font-bold text-green-900">
+              {pipeline?.successful_steps || pipeline?.steps?.filter(s => s.success).length}
+              </p>
               <p className="text-xs text-green-600 mt-1">
                 {pipeline.total_steps > 0
-                  ? Math.round((pipeline.successful_steps / pipeline.total_steps) * 100)
+                  ? Math.round((pipeline?.successful_steps || pipeline?.steps?.filter(s => s.success).length) / (pipeline?.total_steps || pipeline?.steps?.length)) * 100
                   : 0}%
               </p>
             </div>
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-lg border border-red-200">
               <p className="text-xs md:text-sm text-red-700 font-medium mb-1">Failed</p>
-              <p className="text-xl md:text-2xl font-bold text-red-900">{pipeline.failed_steps}</p>
+              <p className="text-xl md:text-2xl font-bold text-red-900">
+              {pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length}
+              </p>
               <p className="text-xs text-red-600 mt-1">
                 {pipeline.total_steps > 0
-                  ? Math.round((pipeline.failed_steps / pipeline.total_steps) * 100)
+                  ? Math.round((pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length) / (pipeline?.total_steps || pipeline?.steps?.length)) * 100
                   : 0}%
               </p>
             </div>
             <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
               <p className="text-xs md:text-sm text-purple-700 font-medium mb-1">Max Depth</p>
-              <p className="text-xl md:text-2xl font-bold text-purple-900">{pipeline.max_depth_reached}</p>
+              <p className="text-xl md:text-2xl font-bold text-purple-900">
+              {pipeline?.max_depth_reached || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -647,3 +656,8 @@ export default function PipelineDetails(props: PipelineDetailsProps) {
   );
 }
 
+function checkIfEqual(prevProps: PipelineDetailsProps, nextProps: PipelineDetailsProps) {
+  return prevProps.pipeline.id === nextProps.pipeline.id && prevProps.steps.length === nextProps.steps.length;
+}
+
+export default memo(PipelineDetails, checkIfEqual);

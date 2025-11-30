@@ -95,8 +95,9 @@ func (p *Scj) GetDataByCategory(data domain.ScjCase, category domain.KeywordCate
 
 	switch category {
 	case domain.KeywordCategoryPersonName:
-		// Split by comma or "vs" (case-insensitive) with optional spaces
-		re := regexp.MustCompile(`(?i)\s*,\s*|\s+vs\s*|\s+vs.\s*|\s+vs\s*|\s+vs.\s*`)
+		// Split by comma or "vs"/"vs." (case-insensitive) with optional spaces
+		// Pattern matches: comma with spaces, or "vs"/"vs." with spaces (case-insensitive)
+		re := regexp.MustCompile(`(?i)\s*,\s*|\s+vs\.?\s*`)
 		// trim the data.Involucrados
 		involucrados := strings.TrimSpace(data.Involucrados)
 		names := re.Split(involucrados, -1)

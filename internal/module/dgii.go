@@ -82,6 +82,7 @@ func (dgi *Dgii) GetDataByCategory(data domain.Register, category domain.Keyword
 func (dgi *Dgii) GetSearchableKeywordCategories() []domain.KeywordCategory {
 	return []domain.KeywordCategory{
 		domain.KeywordCategoryCompanyName,
+		domain.KeywordCategoryPersonName,
 	}
 }
 
