@@ -211,6 +211,8 @@ insightful-intel/
 ## 📖 Documentation
 
 - **[Complete Project Documentation](PROJECT_DOCUMENTATION.md)** - Comprehensive guide covering architecture, DDD implementation, use cases, and more
+- **[Implementing a New Domain Type](docs/IMPLEMENTING_NEW_DOMAIN.md)** - Step-by-step guide to add a new domain type to the system
+- **[Project Improvements Guide](docs/PROJECT_IMPROVEMENTS.md)** - Recommendations for migrations, database structure, testing, and more
 - **[Dynamic Pipeline Guide](DYNAMIC_PIPELINE_GUIDE.md)** - Detailed explanation of the dynamic pipeline system
 - **[Google Docking Builder](GOOGLE_DOCKING_BUILDER.md)** - Google Docking search system documentation
 - **[Domain Search Usage](DOMAIN_SEARCH_USAGE.md)** - How to use domain search functions

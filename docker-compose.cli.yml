@@ -18,6 +18,10 @@ services:
       BLUEPRINT_DB_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
       GOOGLE_CX_KEY: ${GOOGLE_CX_KEY}
+      DGII_API_URL: ${DGII_API_URL}
+      ONAPI_API_URL: ${ONAPI_API_URL}
+      PGR_URL: ${PGR_URL}
+      SCJ_API_URL: ${SCJ_API_URL}
     depends_on:
       mysql_bp:
         condition: service_healthy
