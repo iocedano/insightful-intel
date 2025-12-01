@@ -7,8 +7,6 @@ import (
 	"strconv"
 
 	"insightful-intel/internal/domain"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // onapiHandler handles ONAPI repository operations
@@ -202,7 +200,6 @@ func (s *Server) pipelineHandler(w http.ResponseWriter, r *http.Request) {
 		if id != "" {
 			dynamicResult, err := pipelineRepo.GetPipelineByID(r.Context(), id)
 			if err != nil {
-				spew.Dump("error getting dynamic pipeline result by ID ----> ", err)
 				http.Error(w, fmt.Sprintf("Failed to get pipeline result: %v", err), http.StatusNotFound)
 				return
 			}

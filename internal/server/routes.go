@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -169,7 +167,6 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		result, err = module.SearchDomain(dt, searchParams)
 
 		if err != nil {
-			spew.Dump("error", err)
 			http.Error(w, "Search failed", http.StatusInternalServerError)
 			return
 		}
@@ -257,20 +254,11 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	spew.Dump("before set execution id")
 	ctx := infra.SetExecutionID(context.Background(), executionID)
-	spew.Dump("ctx.Err() == context.Canceled", ctx.Err() == context.Canceled)
-	spew.Dump("ctx.Err() == context.DeadlineExceeded", ctx.Err() == context.DeadlineExceeded)
-	spew.Dump("ctx.Err()", ctx.Err())
 	// Start pipeline execution in the background
 	go func() {
 		log.Printf("[%s] Starting background pipeline execution with query: %s, max depth: %d, skip duplicates: %v",
 			executionID, query, maxDepth, skipDuplicates)
-
-		spew.Dump("before execute dynamic pipeline")
-		spew.Dump(ctx.Err() == context.Canceled)
-		spew.Dump(ctx.Err() == context.DeadlineExceeded)
-		spew.Dump(ctx.Err())
 
 		_, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 		if err != nil {
@@ -280,10 +268,6 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		}
 	}()
 
-	spew.Dump("go func")
-	spew.Dump("ctx.Err() == context.Canceled", ctx.Err() == context.Canceled)
-	spew.Dump("ctx.Err() == context.DeadlineExceeded", ctx.Err() == context.DeadlineExceeded)
-	spew.Dump("ctx.Err()", ctx.Err())
 	// _, err := s.interactor.ExecuteDynamicPipeline(ctx, query, maxDepth, skipDuplicates)
 	// if err != nil {
 	// 	http.Error(w, "Failed to execute dynamic pipeline", http.StatusInternalServerError)

@@ -12,8 +12,6 @@ import (
 	"os"
 	"strings"
 	"unicode"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 var _ domain.DomainConnector[domain.GoogleDorkingResult] = &GoogleDorking{}
@@ -221,8 +219,6 @@ func (gd *GoogleDorking) SearchWithParams(params domain.GoogleDorkingSearchParam
 	}
 
 	q = fmt.Sprintf("%s %s", params.Query, q)
-
-	spew.Dump("q", q)
 
 	resp, err := gd.Stuff.Get(fmt.Sprintf("%s&q=%s", gd.BasePath, url.QueryEscape(q)), map[string]string{}, nil)
 	if err != nil {

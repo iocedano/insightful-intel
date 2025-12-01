@@ -25,10 +25,6 @@ func NewDynamicPipelineInteractor(
 }
 
 func (d *DynamicPipelineInteractor) ExecuteDynamicPipeline(ctx context.Context, query string, maxDepth int, skipDuplicates bool) (*domain.DynamicPipelineResult, error) {
-	spew.Dump("ExecuteDynamicPipeline")
-	spew.Dump(ctx.Err() == context.Canceled)
-	spew.Dump(ctx.Err() == context.DeadlineExceeded)
-	spew.Dump(ctx.Err())
 
 	// Create a channel to receive pipeline steps
 	stepChan := make(chan domain.DynamicPipelineStep, 100)

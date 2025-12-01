@@ -119,26 +119,26 @@ The project follows a clean, layered architecture:
 ```
 insightful-intel/
 ├── docs/                 # Project documentation, guides, technical references
-├── cmd/                  # Application entry points
-│   ├── api/              # HTTP API server
+├── cmd/                  # Application entry points (main.go for API/CLI)
+│   ├── api/              # HTTP API server bootstrap
 │   └── cli/              # Command-line interface
-├── internal/             # Private application code
-│   ├── domain/           # Domain models and business logic
-│   ├── repositories/     # Data access layer
-│   ├── interactor/       # Application use cases
-│   ├── module/           # Domain services
-│   ├── server/           # HTTP handlers and routes
-│   ├── database/         # Database connection and migrations
-│   └── infra/            # Infrastructure concerns
-├── frontend/             # React frontend application
+├── internal/             # Internal/private Go application code
+│   ├── domain/           # Domain models and core business logic
+│   ├── repositories/     # Data access interfaces and implementations
+│   ├── interactor/       # Application/service layer (use cases, orchestration)
+│   ├── module/           # Domain-driven services, helper modules
+│   ├── server/           # HTTP request handlers, endpoints, and routing
+│   ├── database/         # DB connection, migrations, schema management
+│   └── infra/            # External systems and infrastructure tools/adapters
+├── frontend/             # React-based frontend application
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   ├── api.ts       # API client
-│   │   └── types.ts     # TypeScript type definitions
-├── config/              # Configuration management
-├── doc/                # Documentation
-└── vendor/             # Go dependencies
+│   │   ├── components/   # UI/functional React components
+│   │   ├── pages/        # Route-level React components (views)
+│   │   ├── api.ts        # API client for frontend-backend communication
+│   │   └── types.ts      # Shared TypeScript type definitions
+├── config/               # Static configuration files, templates, and environment
+├── doc/                  # Additional documentation/external references
+└── vendor/               # Third-party Go dependencies (populated with Go modules)
 ```
 
 ### Development Workflow
