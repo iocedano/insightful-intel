@@ -4,6 +4,8 @@ export const getHeaders = (domainType: DomainType) => {
     switch (domainType) {
       case 'onapi':
         return ['Expediente', 'Tipo', 'Subtipo', 'Texto', 'Titular'];
+      case 'dgii':
+        return ['RNC', 'Razón Social', 'Nombre Comercial', 'Estado', ];
       case 'scj':
         return ['Expediente', 'Sentencia', 'Tribunal', 'Materia', 'URL', 'Fecha Fallo'];
       case 'pgr':

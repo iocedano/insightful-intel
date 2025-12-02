@@ -19,10 +19,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Register routes
-	// mux.HandleFunc("/", s.HelloWorldHandler)
 	mux.HandleFunc("/search", s.searchHandler)
 	mux.HandleFunc("/dynamic", s.dynamicPipelineHandler)
-	mux.HandleFunc("/health", s.healthHandler)
 
 	// Repository-based routes
 	mux.HandleFunc("/api/onapi", s.onapiHandler)
@@ -225,7 +223,8 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		query = "Novasco" // Default query
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
 	}
 	// User the dymanic interactor
 

@@ -23,7 +23,7 @@ export default function ScjRow({ scjCase, index }: ScjRowProps) {
           rel="noopener noreferrer"
           className="text-blue-600 hover:underline hover:text-blue-800 transition-colors"
         >
-          {scjCase.url_blob.split('/').pop() || 'No URL'}
+          {scjCase?.url_blob?.split('/').pop() || 'No URL'}
         </a>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
