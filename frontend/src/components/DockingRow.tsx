@@ -13,10 +13,7 @@ export default function DockingRow({ docking, index }: DockingRowProps) {
         {docking.title}
       </td>
       <td className="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">
-        {docking.description}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {(docking.relevance * 100).toFixed(1)}%
+        {docking.description || docking.snippet}
       </td>
       <td className="px-6 py-4 text-sm">
         <a

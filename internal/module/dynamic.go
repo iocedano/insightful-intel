@@ -48,6 +48,7 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 	case domain.DomainTypeFileType:
 		output, searchErr = NewGoogleDorkingBuilder().
 			Query(params.Query).
+			IncludeKeywords(domain.FRAUD_KEYWORDS...).
 			FileTypeKeywords(domain.FILE_TYPE_KEYWORDS...).
 			Build()
 	case domain.DomainTypeXSocialMedia:

@@ -80,7 +80,7 @@ export default function Search() {
           </div>
         </div>
       )}
-      <DomainOutput result={result} />
+      {result && 'output' in result ? <DomainOutput result={result as DomainSearchResult} /> : null}
     </div>
   );
 
@@ -143,12 +143,12 @@ export default function Search() {
         {results && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              Results {Array.isArray(results) ? `(${results.length})` : ''}
+              Results {results && 'output' in results && Array.isArray(results.output) ? `(${results.output.length})` : ''}
             </h3>
             {Array.isArray(results) ? (
               results.map((result, index) => renderResult(result, index))
             ) : (
-              renderResult(results)
+              results && 'output' in results ? renderResult(results as DomainSearchResult) : null
             )}
           </div>
         )}
