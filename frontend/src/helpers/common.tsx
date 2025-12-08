@@ -9,7 +9,7 @@ export const getHeaders = (domainType: DomainType) => {
       case 'scj':
         return ['Expediente', 'Sentencia', 'Tribunal', 'Materia', 'URL', 'Fecha Fallo'];
       case 'dgii':
-        return ['RNC', 'Razón Social', 'Nombre Comercial', 'Estado', 'Facturador Electrónico', 'Licencia Comercial'];
+        return ['RNC', 'Razón Social', 'Nombre Comercial', 'Estado'];
       case 'pgr':
         return ['Título', 'URL'];
       case 'docking': case 'social_media': case 'file_type': case 'x_social_media': case 'google_docking':
