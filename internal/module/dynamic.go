@@ -35,23 +35,24 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 	case domain.DomainTypePGR:
 		pgr := NewPgrDomain()
 		output, searchErr = pgr.Search(params.Query)
-	case domain.DomainTypeGoogleDocking:
-		output, searchErr = NewGoogleDockingBuilder().
+	case domain.DomainTypeGoogleDorking:
+		output, searchErr = NewGoogleDorkingBuilder().
 			Query(params.Query).
 			IncludeKeywords(domain.FRAUD_KEYWORDS...).
 			Build()
 	case domain.DomainTypeSocialMedia:
-		output, searchErr = NewGoogleDockingBuilder().
+		output, searchErr = NewGoogleDorkingBuilder().
 			Query(params.Query).
 			SitesKeywords(domain.SOCIAL_MEDIA_SITES_KEYWORDS...).
 			Build()
 	case domain.DomainTypeFileType:
-		output, searchErr = NewGoogleDockingBuilder().
+		output, searchErr = NewGoogleDorkingBuilder().
 			Query(params.Query).
+			IncludeKeywords(domain.FRAUD_KEYWORDS...).
 			FileTypeKeywords(domain.FILE_TYPE_KEYWORDS...).
 			Build()
 	case domain.DomainTypeXSocialMedia:
-		output, searchErr = NewGoogleDockingBuilder().
+		output, searchErr = NewGoogleDorkingBuilder().
 			Query(params.Query).
 			InURLKeywords(domain.X_IN_URL_KEYWORDS...).
 			SitesKeywords([]string{"x.com"}...).
@@ -84,9 +85,9 @@ func SearchDomain(domainType domain.DomainType, params domain.DomainSearchParams
 			if registers, ok := output.([]domain.PGRNews); ok {
 				keywordsPerCategory = domain.GetCategoryByKeywords(NewPgrDomain(), registers)
 			}
-		case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
-			if registers, ok := output.([]domain.GoogleDockingResult); ok {
-				keywordsPerCategory = domain.GetCategoryByKeywords(&GoogleDocking{}, registers)
+		case domain.DomainTypeGoogleDorking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
+			if registers, ok := output.([]domain.GoogleDorkingResult); ok {
+				keywordsPerCategory = domain.GetCategoryByKeywords(&GoogleDorking{}, registers)
 			}
 		}
 	}
@@ -121,8 +122,8 @@ func CreateDomainConnector(domainType domain.DomainType) (any, error) {
 	case domain.DomainTypePGR:
 		pgr := NewPgrDomain()
 		return &pgr, nil
-	case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
-		docking := NewGoogleDockingDomain()
+	case domain.DomainTypeGoogleDorking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
+		docking := NewGoogleDorkingDomain()
 		return &docking, nil
 	default:
 		return nil, fmt.Errorf("unsupported domain type: %s", domainType)
@@ -145,48 +146,14 @@ func SearchMultipleDomains(domainTypes []domain.DomainType, params domain.Domain
 	return results
 }
 
-// DynamicPipelineConfig holds configuration for the dynamic pipeline
-type DynamicPipelineConfig struct {
-	MaxDepth           int
-	MaxConcurrentSteps int
-	DelayBetweenSteps  int // seconds
-	SkipDuplicates     bool
-}
-
 // DefaultDynamicPipelineConfig returns a default configuration
-func DefaultDynamicPipelineConfig() DynamicPipelineConfig {
-	return DynamicPipelineConfig{
+func DefaultDynamicPipelineConfig() domain.DynamicPipelineConfig {
+	return domain.DynamicPipelineConfig{
 		MaxDepth:           5,
 		MaxConcurrentSteps: 10,
 		DelayBetweenSteps:  2,
-		SkipDuplicates:     true,
+		SkipDuplicates:     false,
 	}
-}
-
-// DynamicPipelineStep represents a single step in the pipeline
-type DynamicPipelineStep struct {
-	ID                  domain.ID
-	PipelineID          domain.ID
-	DomainType          domain.DomainType
-	SearchParameter     string
-	Category            domain.KeywordCategory
-	Keywords            []string
-	Success             bool
-	Error               error
-	Output              any
-	KeywordsPerCategory map[domain.KeywordCategory][]string
-	Depth               int
-}
-
-// DynamicPipelineResult represents the complete pipeline result
-type DynamicPipelineResult struct {
-	ID              domain.ID
-	Steps           []DynamicPipelineStep
-	TotalSteps      int
-	SuccessfulSteps int
-	FailedSteps     int
-	MaxDepthReached int
-	Config          DynamicPipelineConfig
 }
 
 // CreateDynamicPipeline creates a dynamic pipeline based on searchable categories
@@ -194,8 +161,8 @@ func CreateDynamicPipeline(
 	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
-	config DynamicPipelineConfig,
-) (*DynamicPipelineResult, error) {
+	config domain.DynamicPipelineConfig,
+) (*domain.DynamicPipelineResult, error) {
 	pipelineID := domain.NewID()
 
 	executionID, _ := infra.GetExecutionID(ctx)
@@ -205,9 +172,9 @@ func CreateDynamicPipeline(
 	}
 
 	// Initialize the pipeline
-	pipeline := &DynamicPipelineResult{
+	pipeline := &domain.DynamicPipelineResult{
 		ID:     pipelineID,
-		Steps:  make([]DynamicPipelineStep, 0),
+		Steps:  make([]domain.DynamicPipelineStep, 0),
 		Config: config,
 	}
 
@@ -224,12 +191,15 @@ func CreateDynamicPipeline(
 		domain.DomainTypeDGII:          domain.KeywordCategoryContributorID,
 		domain.DomainTypePGR:           domain.KeywordCategoryPersonName,
 		domain.DomainTypeSCJ:           domain.KeywordCategoryContributorID,
-		domain.DomainTypeGoogleDocking: domain.KeywordCategoryCompanyName,
+		domain.DomainTypeGoogleDorking: domain.KeywordCategoryCompanyName,
+		domain.DomainTypeSocialMedia:   domain.KeywordCategoryCompanyName,
+		domain.DomainTypeFileType:      domain.KeywordCategoryCompanyName,
+		domain.DomainTypeXSocialMedia:  domain.KeywordCategoryCompanyName,
 	}
 
 	for _, domainType := range availableDomains {
 		if category, ok := initialDomainCategories[domainType]; ok {
-			pipeline.Steps = append(pipeline.Steps, DynamicPipelineStep{
+			pipeline.Steps = append(pipeline.Steps, domain.DynamicPipelineStep{
 				DomainType:      domainType,
 				SearchParameter: initialQuery,
 				Category:        category,
@@ -248,10 +218,10 @@ func generateStepsFromKeywords(
 	availableDomains []domain.DomainType,
 	searchedKeywordsPerDomain map[domain.DomainType]map[string]bool,
 	depth int,
-	config DynamicPipelineConfig,
-) []DynamicPipelineStep {
+	config domain.DynamicPipelineConfig,
+) []domain.DynamicPipelineStep {
 
-	var newSteps []DynamicPipelineStep
+	var newSteps []domain.DynamicPipelineStep
 
 	// Get all available domain connectors
 	domainConnectors := make(map[domain.DomainType]any)
@@ -266,11 +236,11 @@ func generateStepsFromKeywords(
 	// For each category and its keywords
 	for category, keywords := range keywordsPerCategory {
 		// Find domains that can search this category
-		for domainType, connector := range domainConnectors {
-			searchableCategories := getSearchableCategories(connector)
-			if !contains(searchableCategories, category) {
-				continue
-			}
+		for domainType, _ := range domainConnectors {
+			// searchableCategories := GetSearchableKeywordCategories(connector)
+			// if !contains(searchableCategories, category) {
+			// 	continue
+			// }
 
 			// Create steps for each keyword
 			for _, keyword := range keywords {
@@ -286,7 +256,7 @@ func generateStepsFromKeywords(
 					searchedKeywordsPerDomain[domainType][keyword] = true
 				}
 
-				newStep := DynamicPipelineStep{
+				newStep := domain.DynamicPipelineStep{
 					DomainType:      domainType,
 					SearchParameter: keyword,
 					Category:        category,
@@ -302,8 +272,8 @@ func generateStepsFromKeywords(
 	return newSteps
 }
 
-// getSearchableCategories extracts searchable categories from a connector
-func getSearchableCategories(connector any) []domain.KeywordCategory {
+// GetSearchableKeywordCategories extracts searchable categories from a connector
+func GetSearchableKeywordCategories(connector any) []domain.KeywordCategory {
 	switch c := connector.(type) {
 	case *Onapi:
 		return c.GetSearchableKeywordCategories()
@@ -313,7 +283,7 @@ func getSearchableCategories(connector any) []domain.KeywordCategory {
 		return c.GetSearchableKeywordCategories()
 	case *Pgr:
 		return c.GetSearchableKeywordCategories()
-	case *GoogleDocking:
+	case *GoogleDorking:
 		return c.GetSearchableKeywordCategories()
 	default:
 		return []domain.KeywordCategory{}
@@ -335,8 +305,8 @@ func ExecuteDynamicPipeline(
 	ctx context.Context,
 	initialQuery string,
 	availableDomains []domain.DomainType,
-	config DynamicPipelineConfig,
-) (*DynamicPipelineResult, error) {
+	config domain.DynamicPipelineConfig,
+) (*domain.DynamicPipelineResult, error) {
 
 	// Create the pipeline structure
 	pipeline, err := CreateDynamicPipeline(ctx, initialQuery, availableDomains, config)

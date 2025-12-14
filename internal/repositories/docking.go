@@ -9,7 +9,7 @@ import (
 	"insightful-intel/internal/domain"
 )
 
-// DockingRepository implements DomainRepository for Google Docking GoogleDockingResult domain type
+// DockingRepository implements DomainRepository for Google Docking GoogleDorkingResult domain type
 type DockingRepository struct {
 	db DatabaseAccessor
 }
@@ -22,12 +22,12 @@ func NewDockingRepository(db database.Service) *DockingRepository {
 }
 
 // Create inserts a new Google Docking result
-func (r *DockingRepository) Create(ctx context.Context, entity domain.GoogleDockingResult) error {
+func (r *DockingRepository) Create(ctx context.Context, entity domain.GoogleDorkingResult) error {
 	return r.CreateWithDomainSearchResultID(ctx, entity)
 }
 
 // CreateWithDomainSearchResultID inserts a new Google Docking result with a domain search result ID
-func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, entity domain.GoogleDockingResult) error {
+func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, entity domain.GoogleDorkingResult) error {
 	entity.ID = domain.NewID()
 
 	query := `
@@ -46,14 +46,14 @@ func (r *DockingRepository) CreateWithDomainSearchResultID(ctx context.Context, 
 }
 
 // GetByID retrieves a Google Docking result by its URL
-func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.GoogleDockingResult, error) {
+func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.GoogleDorkingResult, error) {
 	query := `
 		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
 		WHERE id = ?
 	`
 
-	var entity domain.GoogleDockingResult
+	var entity domain.GoogleDorkingResult
 	var keywordsJSON string
 
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
@@ -61,7 +61,7 @@ func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.Goog
 	)
 
 	if err != nil {
-		return domain.GoogleDockingResult{}, err
+		return domain.GoogleDorkingResult{}, err
 	}
 
 	// Parse JSON field
@@ -71,7 +71,7 @@ func (r *DockingRepository) GetByID(ctx context.Context, id string) (domain.Goog
 }
 
 // Update modifies an existing Google Docking result
-func (r *DockingRepository) Update(ctx context.Context, id string, entity domain.GoogleDockingResult) error {
+func (r *DockingRepository) Update(ctx context.Context, id string, entity domain.GoogleDorkingResult) error {
 	query := `
 		UPDATE google_docking_results SET
 			domain_search_result_id = ?, title = ?, description = ?, relevance = ?, search_rank = ?, keywords = ?, updated_at = NOW()
@@ -95,7 +95,7 @@ func (r *DockingRepository) Delete(ctx context.Context, id string) error {
 }
 
 // List retrieves multiple Google Docking results with pagination
-func (r *DockingRepository) List(ctx context.Context, offset, limit int) ([]domain.GoogleDockingResult, error) {
+func (r *DockingRepository) List(ctx context.Context, offset, limit int) ([]domain.GoogleDorkingResult, error) {
 	query := `
 		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
@@ -109,9 +109,9 @@ func (r *DockingRepository) List(ctx context.Context, offset, limit int) ([]doma
 	}
 	defer rows.Close()
 
-	var entities []domain.GoogleDockingResult
+	var entities []domain.GoogleDorkingResult
 	for rows.Next() {
-		var entity domain.GoogleDockingResult
+		var entity domain.GoogleDorkingResult
 		var keywordsJSON string
 
 		err := rows.Scan(
@@ -148,7 +148,7 @@ func (r *DockingRepository) Count(ctx context.Context) (int64, error) {
 }
 
 // Search performs a search query on Google Docking results
-func (r *DockingRepository) Search(ctx context.Context, query string, offset, limit int) ([]domain.GoogleDockingResult, error) {
+func (r *DockingRepository) Search(ctx context.Context, query string, offset, limit int) ([]domain.GoogleDorkingResult, error) {
 	searchQuery := `
 		SELECT id, domain_search_result_id, url, title, description, relevance, search_rank, keywords, created_at, updated_at
 		FROM google_docking_results 
@@ -165,9 +165,9 @@ func (r *DockingRepository) Search(ctx context.Context, query string, offset, li
 	}
 	defer rows.Close()
 
-	var entities []domain.GoogleDockingResult
+	var entities []domain.GoogleDorkingResult
 	for rows.Next() {
-		var entity domain.GoogleDockingResult
+		var entity domain.GoogleDorkingResult
 		var keywordsJSON string
 
 		err := rows.Scan(
@@ -196,7 +196,7 @@ func (r *DockingRepository) Search(ctx context.Context, query string, offset, li
 }
 
 // SearchByCategory performs a search within a specific keyword category
-func (r *DockingRepository) SearchByCategory(ctx context.Context, category domain.KeywordCategory, query string, offset, limit int) ([]domain.GoogleDockingResult, error) {
+func (r *DockingRepository) SearchByCategory(ctx context.Context, category domain.KeywordCategory, query string, offset, limit int) ([]domain.GoogleDorkingResult, error) {
 	var searchQuery string
 	searchPattern := "%" + query + "%"
 
@@ -234,7 +234,7 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 			LIMIT ? OFFSET ?
 		`
 	default:
-		return []domain.GoogleDockingResult{}, fmt.Errorf("unsupported category: %s", category)
+		return []domain.GoogleDorkingResult{}, fmt.Errorf("unsupported category: %s", category)
 	}
 
 	var rows *sql.Rows
@@ -256,9 +256,9 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 	}
 	defer rows.Close()
 
-	var entities []domain.GoogleDockingResult
+	var entities []domain.GoogleDorkingResult
 	for rows.Next() {
-		var entity domain.GoogleDockingResult
+		var entity domain.GoogleDorkingResult
 		var keywordsJSON string
 
 		err := rows.Scan(
@@ -287,13 +287,13 @@ func (r *DockingRepository) SearchByCategory(ctx context.Context, category domai
 }
 
 // GetByDomainType retrieves Google Docking results by domain type
-func (r *DockingRepository) GetByDomainType(ctx context.Context, domainType domain.DomainType, offset, limit int) ([]domain.GoogleDockingResult, error) {
+func (r *DockingRepository) GetByDomainType(ctx context.Context, domainType domain.DomainType, offset, limit int) ([]domain.GoogleDorkingResult, error) {
 	// For Google Docking, all results are of the same domain type, so we just return all
 	return r.List(ctx, offset, limit)
 }
 
 // GetBySearchParameter retrieves Google Docking results by search parameter
-func (r *DockingRepository) GetBySearchParameter(ctx context.Context, searchParam string, offset, limit int) ([]domain.GoogleDockingResult, error) {
+func (r *DockingRepository) GetBySearchParameter(ctx context.Context, searchParam string, offset, limit int) ([]domain.GoogleDorkingResult, error) {
 	return r.Search(ctx, searchParam, offset, limit)
 }
 
@@ -304,7 +304,7 @@ func (r *DockingRepository) GetKeywordsByCategory(ctx context.Context, entityID 
 	// 	return nil, err
 	// }
 
-	// docking := domain.NewGoogleDockingDomain()
+	// docking := domain.NewGoogleDorkingDomain()
 	return map[domain.KeywordCategory][]string{
 		// domain.KeywordCategoryCompanyName: docking.GetDataByCategory(entity, domain.KeywordCategoryCompanyName),
 		// domain.KeywordCategoryPersonName:  docking.GetDataByCategory(entity, domain.KeywordCategoryPersonName),

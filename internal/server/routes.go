@@ -13,18 +13,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Register routes
-	// mux.HandleFunc("/", s.HelloWorldHandler)
 	mux.HandleFunc("/search", s.searchHandler)
 	mux.HandleFunc("/dynamic", s.dynamicPipelineHandler)
-	mux.HandleFunc("/health", s.healthHandler)
 
 	// Repository-based routes
 	mux.HandleFunc("/api/onapi", s.onapiHandler)
@@ -115,7 +111,7 @@ func Step[T any](
 }
 
 // convertDynamicPipelineToConnectorPipeline converts DynamicPipelineResult to ConnectorPipeline format
-func convertDynamicPipelineToConnectorPipeline(dynamicResult *module.DynamicPipelineResult) []ConnectorPipeline {
+func convertDynamicPipelineToConnectorPipeline(dynamicResult *domain.DynamicPipelineResult) []ConnectorPipeline {
 	pipeline := make([]ConnectorPipeline, 0, len(dynamicResult.Steps))
 
 	for _, step := range dynamicResult.Steps {
@@ -169,7 +165,6 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 		result, err = module.SearchDomain(dt, searchParams)
 
 		if err != nil {
-			spew.Dump("error", err)
 			http.Error(w, "Search failed", http.StatusInternalServerError)
 			return
 		}
@@ -228,7 +223,8 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		query = "Novasco" // Default query
+		http.Error(w, "Query parameter 'q' is required", http.StatusBadRequest)
+		return
 	}
 	// User the dymanic interactor
 
@@ -257,8 +253,7 @@ func (s *Server) dynamicPipelineHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx := infra.SetExecutionID(r.Context(), executionID)
-
+	ctx := infra.SetExecutionID(context.Background(), executionID)
 	// Start pipeline execution in the background
 	go func() {
 		log.Printf("[%s] Starting background pipeline execution with query: %s, max depth: %d, skip duplicates: %v",
@@ -305,11 +300,11 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Access-Control-Allow-Headers", "Cache-Control")
 
 	// Create a channel to receive pipeline steps
-	stepChan := make(chan module.DynamicPipelineStep, 100)
+	stepChan := make(chan domain.DynamicPipelineStep, 100)
 	done := make(chan bool)
 
 	// Configure the dynamic pipeline
-	config := module.DynamicPipelineConfig{
+	config := domain.DynamicPipelineConfig{
 		MaxDepth:           maxDepth,
 		MaxConcurrentSteps: 10,
 		DelayBetweenSteps:  2,
@@ -328,7 +323,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 		dynamicResult, err := s.executeDynamicPipelineWithCallback(r.Context(), query, availableDomains, config, stepChan)
 		if err != nil {
 			// Send error as a step
-			errorStep := module.DynamicPipelineStep{
+			errorStep := domain.DynamicPipelineStep{
 				DomainType:      "ERROR",
 				SearchParameter: query,
 				Success:         false,
@@ -341,7 +336,7 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 		}
 
 		// Send final summary
-		summaryStep := module.DynamicPipelineStep{
+		summaryStep := domain.DynamicPipelineStep{
 			DomainType:      "SUMMARY",
 			SearchParameter: query,
 			Success:         true,
@@ -419,13 +414,13 @@ func (s *Server) dynamicPipelineStreamHandler(w http.ResponseWriter, r *http.Req
 }
 
 // executeDynamicPipelineWithCallback executes the dynamic pipeline and sends steps to a channel
-func (s *Server) executeDynamicPipelineWithCallback(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeDynamicPipelineWithCallback(ctx context.Context, query string, availableDomains []domain.DomainType, config domain.DynamicPipelineConfig, stepChan chan<- domain.DynamicPipelineStep) (*domain.DynamicPipelineResult, error) {
 	// Create a custom pipeline executor that streams steps
 	return s.executeStreamingPipeline(ctx, query, availableDomains, config, stepChan)
 }
 
 // executeStreamingPipeline executes the pipeline with real-time streaming
-func (s *Server) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config module.DynamicPipelineConfig, stepChan chan<- module.DynamicPipelineStep) (*module.DynamicPipelineResult, error) {
+func (s *Server) executeStreamingPipeline(ctx context.Context, query string, availableDomains []domain.DomainType, config domain.DynamicPipelineConfig, stepChan chan<- domain.DynamicPipelineStep) (*domain.DynamicPipelineResult, error) {
 	// Create the initial pipeline steps
 	initialResult, err := module.CreateDynamicPipeline(ctx, query, availableDomains, config)
 	if err != nil {
@@ -447,10 +442,10 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 	}
 
 	// Process steps with streaming
-	processedSteps := make([]module.DynamicPipelineStep, 0)
+	processedSteps := make([]domain.DynamicPipelineStep, 0)
 
 	// Create a queue for steps to process
-	stepQueue := make([]module.DynamicPipelineStep, len(initialSteps))
+	stepQueue := make([]domain.DynamicPipelineStep, len(initialSteps))
 	copy(stepQueue, initialSteps)
 
 	for len(stepQueue) > 0 {
@@ -502,7 +497,7 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 	}
 
 	// Create final result
-	dynamicResult := &module.DynamicPipelineResult{
+	dynamicResult := &domain.DynamicPipelineResult{
 		Steps:           processedSteps,
 		TotalSteps:      totalSteps,
 		SuccessfulSteps: successfulSteps,
@@ -515,8 +510,8 @@ func (s *Server) executeStreamingPipeline(ctx context.Context, query string, ava
 }
 
 // generateNextSteps generates new pipeline steps from a completed step
-func (s *Server) generateNextSteps(completedStep module.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config module.DynamicPipelineConfig) []module.DynamicPipelineStep {
-	var newSteps []module.DynamicPipelineStep
+func (s *Server) generateNextSteps(completedStep domain.DynamicPipelineStep, availableDomains []domain.DomainType, searchedKeywordsPerDomain map[domain.DomainType]map[string]bool, config domain.DynamicPipelineConfig) []domain.DynamicPipelineStep {
+	var newSteps []domain.DynamicPipelineStep
 
 	// Extract keywords from the completed step
 	keywordsPerCategory := completedStep.KeywordsPerCategory
@@ -548,7 +543,7 @@ func (s *Server) generateNextSteps(completedStep module.DynamicPipelineStep, ava
 				searchedKeywordsPerDomain[domainType][keyword] = true
 
 				// Create new step
-				newStep := module.DynamicPipelineStep{
+				newStep := domain.DynamicPipelineStep{
 					DomainType:          domainType,
 					SearchParameter:     keyword,
 					Category:            category,
@@ -597,7 +592,7 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 // Google Docking handlers
 
-func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -638,10 +633,10 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create Google Docking connector
-	googleDocking := module.NewGoogleDockingDomain()
+	googleDorking := module.NewGoogleDorkingDomain()
 
 	// Create search parameters
-	params := domain.GoogleDockingSearchParams{
+	params := domain.GoogleDorkingSearchParams{
 		Query:           query,
 		MaxResults:      maxResults,
 		MinRelevance:    minRelevance,
@@ -652,14 +647,14 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Perform search
-	results, err := googleDocking.SearchWithParams(params)
+	results, err := googleDorking.SearchWithParams(params)
 	if err != nil {
 		http.Error(w, "Search failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Get statistics
-	stats := googleDocking.GetSearchStatistics(results)
+	stats := googleDorking.GetSearchStatistics(results)
 
 	// Create response
 	response := map[string]interface{}{
@@ -682,7 +677,7 @@ func (s *Server) googleDockingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingSuggestionsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -694,8 +689,8 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 		return
 	}
 
-	googleDocking := module.NewGoogleDockingDomain()
-	suggestions, err := googleDocking.GetSearchSuggestions(query)
+	googleDorking := module.NewGoogleDorkingDomain()
+	suggestions, err := googleDorking.GetSearchSuggestions(query)
 	if err != nil {
 		http.Error(w, "Failed to get suggestions: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -712,14 +707,14 @@ func (s *Server) googleDockingSuggestionsHandler(w http.ResponseWriter, r *http.
 	json.NewEncoder(w).Encode(response)
 }
 
-func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) googleDorkingStatisticsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var request struct {
-		Results []domain.GoogleDockingResult `json:"results"`
+		Results []domain.GoogleDorkingResult `json:"results"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -727,8 +722,8 @@ func (s *Server) googleDockingStatisticsHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	googleDocking := module.NewGoogleDockingDomain()
-	stats := googleDocking.GetSearchStatistics(request.Results)
+	googleDorking := module.NewGoogleDorkingDomain()
+	stats := googleDorking.GetSearchStatistics(request.Results)
 
 	response := map[string]interface{}{
 		"success":       true,

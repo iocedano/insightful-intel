@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export default function Navigation() {
+  const location = useLocation();
   const navItems = [
+    { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/pipeline', label: 'Pipeline', icon: '🔍' },
     { path: '/search', label: 'Search', icon: '🔎' },
     { path: '/onapi', label: 'ONAPI', icon: '📋' },
@@ -10,6 +12,13 @@ export default function Navigation() {
     { path: '/pgr', label: 'PGR', icon: '📰' },
     { path: '/docking', label: 'Docking', icon: '🔗' },
   ];
+
+  const isDashboardActive = (path: string) => {
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname === '/dashboard';
+    }
+    return location.pathname === path;
+  };
 
   return (
     <nav className="bg-white shadow-md">
@@ -20,22 +29,26 @@ export default function Navigation() {
               <h1 className="text-xl font-bold text-gray-900">Insightful Intel</h1>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+              {navItems.map((item) => {
+                const isActive = item.path === '/' 
+                  ? isDashboardActive(item.path)
+                  : location.pathname === item.path;
+                
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                       isActive
                         ? 'border-blue-500 text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    }`
-                  }
-                >
-                  <span className="mr-2">{item.icon}</span>
-                  {item.label}
-                </NavLink>
-              ))}
+                    }`}
+                  >
+                    <span className="mr-2">{item.icon}</span>
+                    {item.label}
+                  </NavLink>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -44,22 +57,26 @@ export default function Navigation() {
       {/* Mobile menu */}
       <div className="sm:hidden">
         <div className="pt-2 pb-3 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+          {navItems.map((item) => {
+            const isActive = item.path === '/' 
+              ? isDashboardActive(item.path)
+              : location.pathname === item.path;
+            
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={`w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                   isActive
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
-                }`
-              }
-            >
-              <span className="mr-2">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
+                }`}
+              >
+                <span className="mr-2">{item.icon}</span>
+                {item.label}
+              </NavLink>
+            );
+          })}
         </div>
       </div>
     </nav>

@@ -10,24 +10,21 @@ import (
 	"math"
 	"net/url"
 	"os"
-	"sort"
 	"strings"
 	"unicode"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
-var _ domain.DomainConnector[domain.GoogleDockingResult] = &GoogleDocking{}
+var _ domain.DomainConnector[domain.GoogleDorkingResult] = &GoogleDorking{}
 
-// GoogleDocking represents a Google Docking string search connector
-type GoogleDocking struct {
+// GoogleDorking represents a Google Docking string search connector
+type GoogleDorking struct {
 	Stuff    custom.Client
 	BasePath string
 	PathMap  custom.CustomPathMap
 }
 
-// NewGoogleDockingDomain creates a new Google Docking domain instance
-func NewGoogleDockingDomain() GoogleDocking {
+// NewGoogleDorkingDomain creates a new Google Docking domain instance
+func NewGoogleDorkingDomain() GoogleDorking {
 	googleApiKey := os.Getenv("GOOGLE_API_KEY")
 	googleSearchEngineId := os.Getenv("GOOGLE_CX_KEY")
 	if googleApiKey == "" || googleSearchEngineId == "" {
@@ -36,46 +33,46 @@ func NewGoogleDockingDomain() GoogleDocking {
 
 	googleSearchUrl := fmt.Sprintf("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s", googleApiKey, googleSearchEngineId)
 
-	return GoogleDocking{
+	return GoogleDorking{
 		BasePath: googleSearchUrl,
 		Stuff:    *custom.NewClient(),
 	}
 }
 
-type GoogleDockingSearchResponse struct {
-	Items []domain.GoogleDockingResult `json:"items"`
+type GoogleDorkingSearchResponse struct {
+	Items []domain.GoogleDorkingResult `json:"items"`
 }
 
-// GoogleDockingBuilder provides a fluent interface for building Google Docking searches
-type GoogleDockingBuilder struct {
-	params domain.GoogleDockingSearchParams
-	gd     *GoogleDocking
+// GoogleDorkingBuilder provides a fluent interface for building Google Docking searches
+type GoogleDorkingBuilder struct {
+	params domain.GoogleDorkingSearchParams
+	gd     *GoogleDorking
 }
 
-// NewGoogleDockingBuilder creates a new Google Docking builder
-func NewGoogleDockingBuilder() *GoogleDockingBuilder {
-	return &GoogleDockingBuilder{
-		params: domain.GoogleDockingSearchParams{
+// NewGoogleDorkingBuilder creates a new Google Docking builder
+func NewGoogleDorkingBuilder() *GoogleDorkingBuilder {
+	return &GoogleDorkingBuilder{
+		params: domain.GoogleDorkingSearchParams{
 			MaxResults:    10,
 			MinRelevance:  0.1,
 			ExactMatch:    false,
 			CaseSensitive: false,
 		},
-		gd: func() *GoogleDocking {
-			gd := NewGoogleDockingDomain()
+		gd: func() *GoogleDorking {
+			gd := NewGoogleDorkingDomain()
 			return &gd
 		}(),
 	}
 }
 
 // Query sets the search query
-func (b *GoogleDockingBuilder) Query(query string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) Query(query string) *GoogleDorkingBuilder {
 	b.params.Query = query
 	return b
 }
 
 // MaxResults sets the maximum number of results
-func (b *GoogleDockingBuilder) MaxResults(max int) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) MaxResults(max int) *GoogleDorkingBuilder {
 	if max > 0 {
 		b.params.MaxResults = max
 	}
@@ -83,7 +80,7 @@ func (b *GoogleDockingBuilder) MaxResults(max int) *GoogleDockingBuilder {
 }
 
 // MinRelevance sets the minimum relevance threshold
-func (b *GoogleDockingBuilder) MinRelevance(min float64) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) MinRelevance(min float64) *GoogleDorkingBuilder {
 	if min >= 0 && min <= 1 {
 		b.params.MinRelevance = min
 	}
@@ -91,49 +88,49 @@ func (b *GoogleDockingBuilder) MinRelevance(min float64) *GoogleDockingBuilder {
 }
 
 // ExactMatch enables exact matching
-func (b *GoogleDockingBuilder) ExactMatch(exact bool) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) ExactMatch(exact bool) *GoogleDorkingBuilder {
 	b.params.ExactMatch = exact
 	return b
 }
 
 // CaseSensitive enables case-sensitive search
-func (b *GoogleDockingBuilder) CaseSensitive(caseSensitive bool) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) CaseSensitive(caseSensitive bool) *GoogleDorkingBuilder {
 	b.params.CaseSensitive = caseSensitive
 	return b
 }
 
 // IncludeKeywords adds keywords that must be present
-func (b *GoogleDockingBuilder) IncludeKeywords(keywords ...string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) IncludeKeywords(keywords ...string) *GoogleDorkingBuilder {
 	b.params.IncludeKeywords = append(b.params.IncludeKeywords, keywords...)
 	return b
 }
 
 // FileTypeKeywords adds file type keywords
-func (b *GoogleDockingBuilder) FileTypeKeywords(keywords ...string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) FileTypeKeywords(keywords ...string) *GoogleDorkingBuilder {
 	b.params.FileTypeKeywords = append(b.params.FileTypeKeywords, keywords...)
 	return b
 }
 
 // SitesKeywords adds sites keywords
-func (b *GoogleDockingBuilder) SitesKeywords(keywords ...string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) SitesKeywords(keywords ...string) *GoogleDorkingBuilder {
 	b.params.SitesKeywords = append(b.params.SitesKeywords, keywords...)
 	return b
 }
 
 // InURLKeywords adds keywords to the URL
-func (b *GoogleDockingBuilder) InURLKeywords(keywords ...string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) InURLKeywords(keywords ...string) *GoogleDorkingBuilder {
 	b.params.InURLKeywords = append(b.params.InURLKeywords, keywords...)
 	return b
 }
 
 // ExcludeKeywords adds keywords to exclude
-func (b *GoogleDockingBuilder) ExcludeKeywords(keywords ...string) *GoogleDockingBuilder {
+func (b *GoogleDorkingBuilder) ExcludeKeywords(keywords ...string) *GoogleDorkingBuilder {
 	b.params.ExcludeKeywords = append(b.params.ExcludeKeywords, keywords...)
 	return b
 }
 
 // Build executes the search and returns results
-func (b *GoogleDockingBuilder) Build() ([]domain.GoogleDockingResult, error) {
+func (b *GoogleDorkingBuilder) Build() ([]domain.GoogleDorkingResult, error) {
 	if b.params.Query == "" {
 		return nil, fmt.Errorf("query is required")
 	}
@@ -141,7 +138,7 @@ func (b *GoogleDockingBuilder) Build() ([]domain.GoogleDockingResult, error) {
 }
 
 // BuildWithStats executes the search and returns results with statistics
-func (b *GoogleDockingBuilder) BuildWithStats() ([]domain.GoogleDockingResult, map[string]interface{}, error) {
+func (b *GoogleDorkingBuilder) BuildWithStats() ([]domain.GoogleDorkingResult, map[string]interface{}, error) {
 	results, err := b.Build()
 	if err != nil {
 		return nil, nil, err
@@ -152,13 +149,13 @@ func (b *GoogleDockingBuilder) BuildWithStats() ([]domain.GoogleDockingResult, m
 }
 
 // GetDomainType returns the domain type for Google Docking
-func (*GoogleDocking) GetDomainType() domain.DomainType {
-	return domain.DomainTypeGoogleDocking
+func (*GoogleDorking) GetDomainType() domain.DomainType {
+	return domain.DomainTypeGoogleDorking
 }
 
 // Search performs a Google Docking string search
-func (gd *GoogleDocking) Search(query string) ([]domain.GoogleDockingResult, error) {
-	params := domain.GoogleDockingSearchParams{
+func (gd *GoogleDorking) Search(query string) ([]domain.GoogleDorkingResult, error) {
+	params := domain.GoogleDorkingSearchParams{
 		Query:         query,
 		MaxResults:    10,
 		MinRelevance:  0.1,
@@ -169,7 +166,7 @@ func (gd *GoogleDocking) Search(query string) ([]domain.GoogleDockingResult, err
 }
 
 // SearchWithParams performs a Google Docking search with custom parameters
-func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParams) ([]domain.GoogleDockingResult, error) {
+func (gd *GoogleDorking) SearchWithParams(params domain.GoogleDorkingSearchParams) ([]domain.GoogleDorkingResult, error) {
 	if params.Query == "" {
 		return nil, fmt.Errorf("query cannot be empty")
 	}
@@ -223,8 +220,6 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 
 	q = fmt.Sprintf("%s %s", params.Query, q)
 
-	spew.Dump("q", q)
-
 	resp, err := gd.Stuff.Get(fmt.Sprintf("%s&q=%s", gd.BasePath, url.QueryEscape(q)), map[string]string{}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
@@ -236,131 +231,16 @@ func (gd *GoogleDocking) SearchWithParams(params domain.GoogleDockingSearchParam
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var result GoogleDockingSearchResponse
+	var result GoogleDorkingSearchResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
-	spew.Dump("result", result)
-	spew.Dump("result.Items", result.Items[0])
 
 	return result.Items, nil
 }
 
-func extractURLFromQuery(URL string) string {
-	URL = strings.Replace(URL, "//duckduckgo.com/l/?uddg=", "", 1)
-	URL = strings.Split(URL, "&rut=")[0]
-	urlParsed, err := url.QueryUnescape(URL)
-	if err != nil {
-		return ""
-	}
-	return urlParsed
-}
-
-// generateMockResults generates mock search results for demonstration
-func (gd *GoogleDocking) generateMockResults(query string, maxResults int) []domain.GoogleDockingResult {
-	// In a real implementation, this would make HTTP requests to Google's search API
-	mockResults := []domain.GoogleDockingResult{
-		{
-			URL:         "https://example.com/page1",
-			Title:       "Example Page 1 - " + query,
-			Description: "This is a description containing " + query + " and other relevant information.",
-			Keywords:    []string{query, "example", "page"},
-		},
-		{
-			URL:         "https://example.com/page2",
-			Title:       "Another Example - " + strings.ToUpper(query),
-			Description: "Another description with " + query + " mentioned multiple times for better relevance.",
-			Keywords:    []string{query, "another", "example"},
-		},
-		{
-			URL:         "https://example.com/page3",
-			Title:       "Related Content",
-			Description: "This page discusses topics related to " + query + " and provides additional context.",
-			Keywords:    []string{"related", "content", query},
-		},
-		{
-			URL:         "https://example.com/page4",
-			Title:       "Unrelated Page",
-			Description: "This page doesn't contain the search term and should have low relevance.",
-			Keywords:    []string{"unrelated", "page"},
-		},
-	}
-
-	// Limit results to maxResults
-	if len(mockResults) > maxResults {
-		mockResults = mockResults[:maxResults]
-	}
-
-	return mockResults
-}
-
-// rankResults ranks search results based on relevance scoring
-func (gd *GoogleDocking) rankResults(results []domain.GoogleDockingResult, params domain.GoogleDockingSearchParams) []domain.GoogleDockingResult {
-	for i := range results {
-		results[i].Relevance = gd.calculateRelevance(results[i], params)
-	}
-
-	// Sort by relevance (highest first)
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Relevance > results[j].Relevance
-	})
-
-	// Assign ranks
-	for i := range results {
-		results[i].Rank = i + 1
-	}
-
-	return results
-}
-
-// calculateRelevance calculates the relevance score for a search result
-func (gd *GoogleDocking) calculateRelevance(result domain.GoogleDockingResult, params domain.GoogleDockingSearchParams) float64 {
-	score := 0.0
-	query := params.Query
-
-	if !params.CaseSensitive {
-		query = strings.ToLower(query)
-	}
-
-	// Title relevance (highest weight)
-	titleScore := gd.calculateStringMatch(result.Title, query, params)
-	score += titleScore * 3.0
-
-	// Description relevance (medium weight)
-	descScore := gd.calculateStringMatch(result.Description, query, params)
-	score += descScore * 2.0
-
-	// URL relevance (lower weight)
-	urlScore := gd.calculateStringMatch(result.URL, query, params)
-	score += urlScore * 1.0
-
-	// Keywords relevance
-	keywordScore := gd.calculateKeywordMatch(result.Keywords, query, params)
-	score += keywordScore * 1.5
-
-	// Exact match bonus
-	if params.ExactMatch && gd.hasExactMatch(result, query, params) {
-		score += 2.0
-	}
-
-	// Include keywords bonus
-	if len(params.IncludeKeywords) > 0 {
-		includeBonus := gd.calculateIncludeKeywordsBonus(result, params.IncludeKeywords)
-		score += includeBonus
-	}
-
-	// Exclude keywords penalty
-	if len(params.ExcludeKeywords) > 0 {
-		excludePenalty := gd.calculateExcludeKeywordsPenalty(result, params.ExcludeKeywords)
-		score -= excludePenalty
-	}
-
-	// Normalize score to 0-1 range
-	return math.Min(score/10.0, 1.0)
-}
-
 // calculateStringMatch calculates how well a string matches the query
-func (gd *GoogleDocking) calculateStringMatch(text, query string, params domain.GoogleDockingSearchParams) float64 {
+func (gd *GoogleDorking) calculateStringMatch(text, query string, params domain.GoogleDorkingSearchParams) float64 {
 	if text == "" {
 		return 0.0
 	}
@@ -409,7 +289,7 @@ func (gd *GoogleDocking) calculateStringMatch(text, query string, params domain.
 }
 
 // calculateKeywordMatch calculates keyword matching score
-func (gd *GoogleDocking) calculateKeywordMatch(keywords []string, query string, params domain.GoogleDockingSearchParams) float64 {
+func (gd *GoogleDorking) calculateKeywordMatch(keywords []string, query string, params domain.GoogleDorkingSearchParams) float64 {
 	if len(keywords) == 0 {
 		return 0.0
 	}
@@ -443,7 +323,7 @@ func (gd *GoogleDocking) calculateKeywordMatch(keywords []string, query string, 
 }
 
 // hasExactMatch checks if the result has an exact match
-func (gd *GoogleDocking) hasExactMatch(result domain.GoogleDockingResult, query string, params domain.GoogleDockingSearchParams) bool {
+func (gd *GoogleDorking) hasExactMatch(result domain.GoogleDorkingResult, query string, params domain.GoogleDorkingSearchParams) bool {
 	texts := []string{result.Title, result.Description, result.URL}
 
 	for _, text := range texts {
@@ -459,49 +339,8 @@ func (gd *GoogleDocking) hasExactMatch(result domain.GoogleDockingResult, query 
 	return false
 }
 
-// calculateIncludeKeywordsBonus calculates bonus for including required keywords
-func (gd *GoogleDocking) calculateIncludeKeywordsBonus(result domain.GoogleDockingResult, includeKeywords []string) float64 {
-	bonus := 0.0
-	text := strings.ToLower(result.Title + " " + result.Description)
-
-	for _, keyword := range includeKeywords {
-		if strings.Contains(text, strings.ToLower(keyword)) {
-			bonus += 0.5
-		}
-	}
-
-	return bonus
-}
-
-// calculateExcludeKeywordsPenalty calculates penalty for excluding unwanted keywords
-func (gd *GoogleDocking) calculateExcludeKeywordsPenalty(result domain.GoogleDockingResult, excludeKeywords []string) float64 {
-	penalty := 0.0
-	text := strings.ToLower(result.Title + " " + result.Description)
-
-	for _, keyword := range excludeKeywords {
-		if strings.Contains(text, strings.ToLower(keyword)) {
-			penalty += 1.0
-		}
-	}
-
-	return penalty
-}
-
-// filterByRelevance filters results by minimum relevance threshold
-func (gd *GoogleDocking) filterByRelevance(results []domain.GoogleDockingResult, minRelevance float64) []domain.GoogleDockingResult {
-	filtered := make([]domain.GoogleDockingResult, 0, len(results))
-
-	for _, result := range results {
-		if result.Relevance >= minRelevance {
-			filtered = append(filtered, result)
-		}
-	}
-
-	return filtered
-}
-
 // levenshteinDistance calculates the Levenshtein distance between two strings
-func (gd *GoogleDocking) levenshteinDistance(s1, s2 string) int {
+func (gd *GoogleDorking) levenshteinDistance(s1, s2 string) int {
 	r1, r2 := []rune(s1), []rune(s2)
 	rows := len(r1) + 1
 	cols := len(r2) + 1
@@ -542,18 +381,18 @@ func min(a, b, c int) int {
 	return c
 }
 
-// Implement DomainConnector[domain.GoogleDockingResult] for GoogleDocking
+// Implement DomainConnector[domain.GoogleDorkingResult] for GoogleDorking
 
 // ProcessData processes a Google Docking result
-func (gd *GoogleDocking) ProcessData(data domain.GoogleDockingResult) (domain.GoogleDockingResult, error) {
+func (gd *GoogleDorking) ProcessData(data domain.GoogleDorkingResult) (domain.GoogleDorkingResult, error) {
 	if err := gd.ValidateData(data); err != nil {
-		return domain.GoogleDockingResult{}, err
+		return domain.GoogleDorkingResult{}, err
 	}
 	return gd.TransformData(data), nil
 }
 
 // ValidateData validates a Google Docking result
-func (gd *GoogleDocking) ValidateData(data domain.GoogleDockingResult) error {
+func (gd *GoogleDorking) ValidateData(data domain.GoogleDorkingResult) error {
 	if data.URL == "" {
 		return fmt.Errorf("URL is required")
 	}
@@ -567,7 +406,7 @@ func (gd *GoogleDocking) ValidateData(data domain.GoogleDockingResult) error {
 }
 
 // TransformData transforms a Google Docking result
-func (gd *GoogleDocking) TransformData(data domain.GoogleDockingResult) domain.GoogleDockingResult {
+func (gd *GoogleDorking) TransformData(data domain.GoogleDorkingResult) domain.GoogleDorkingResult {
 	transformed := data
 	transformed.URL = strings.TrimSpace(data.URL)
 	transformed.Title = strings.TrimSpace(data.Title)
@@ -587,7 +426,7 @@ func (gd *GoogleDocking) TransformData(data domain.GoogleDockingResult) domain.G
 }
 
 // GetDataByCategory extracts data by keyword category
-func (gd *GoogleDocking) GetDataByCategory(data domain.GoogleDockingResult, category domain.KeywordCategory) []string {
+func (gd *GoogleDorking) GetDataByCategory(data domain.GoogleDorkingResult, category domain.KeywordCategory) []string {
 	switch category {
 	// case domain.KeywordCategoryCompanyName:
 	// 	return gd.extractCompanyNames(data)
@@ -603,7 +442,7 @@ func (gd *GoogleDocking) GetDataByCategory(data domain.GoogleDockingResult, cate
 }
 
 // extractCompanyNames extracts potential company names from the result
-func (gd *GoogleDocking) extractCompanyNames(data domain.GoogleDockingResult) []string {
+func (gd *GoogleDorking) extractCompanyNames(data domain.GoogleDorkingResult) []string {
 	companies := []string{}
 	text := data.Title + " " + data.Description
 
@@ -628,7 +467,7 @@ func (gd *GoogleDocking) extractCompanyNames(data domain.GoogleDockingResult) []
 }
 
 // extractPersonNames extracts potential person names from the result
-func (gd *GoogleDocking) extractPersonNames(data domain.GoogleDockingResult) []string {
+func (gd *GoogleDorking) extractPersonNames(data domain.GoogleDorkingResult) []string {
 	names := []string{}
 	text := data.Title + " " + data.Description
 
@@ -656,7 +495,7 @@ func (gd *GoogleDocking) extractPersonNames(data domain.GoogleDockingResult) []s
 }
 
 // extractAddresses extracts potential addresses from the result
-func (gd *GoogleDocking) extractAddresses(data domain.GoogleDockingResult) []string {
+func (gd *GoogleDorking) extractAddresses(data domain.GoogleDorkingResult) []string {
 	addresses := []string{}
 	text := data.Title + " " + data.Description
 
@@ -683,7 +522,7 @@ func (gd *GoogleDocking) extractAddresses(data domain.GoogleDockingResult) []str
 }
 
 // extractSocialMedia extracts social media handles and URLs
-func (gd *GoogleDocking) extractSocialMedia(data domain.GoogleDockingResult) []string {
+func (gd *GoogleDorking) extractSocialMedia(data domain.GoogleDorkingResult) []string {
 	social := []string{}
 	text := data.Title + " " + data.Description + " " + data.URL
 
@@ -700,7 +539,7 @@ func (gd *GoogleDocking) extractSocialMedia(data domain.GoogleDockingResult) []s
 }
 
 // GetSearchableKeywordCategories returns the categories that can be searched
-func (gd *GoogleDocking) GetSearchableKeywordCategories() []domain.KeywordCategory {
+func (gd *GoogleDorking) GetSearchableKeywordCategories() []domain.KeywordCategory {
 	return []domain.KeywordCategory{
 		domain.KeywordCategoryCompanyName,
 		domain.KeywordCategoryPersonName,
@@ -708,15 +547,15 @@ func (gd *GoogleDocking) GetSearchableKeywordCategories() []domain.KeywordCatego
 }
 
 // GetFoundKeywordCategories returns the categories that can be found in results
-func (gd *GoogleDocking) GetFoundKeywordCategories() []domain.KeywordCategory {
+func (gd *GoogleDorking) GetFoundKeywordCategories() []domain.KeywordCategory {
 	return []domain.KeywordCategory{}
 }
 
 // Advanced search methods
 
 // SearchWithFilters performs a search with advanced filtering options
-func (gd *GoogleDocking) SearchWithFilters(query string, filters map[string]interface{}) ([]domain.GoogleDockingResult, error) {
-	params := domain.GoogleDockingSearchParams{
+func (gd *GoogleDorking) SearchWithFilters(query string, filters map[string]interface{}) ([]domain.GoogleDorkingResult, error) {
+	params := domain.GoogleDorkingSearchParams{
 		Query:        query,
 		MaxResults:   10,
 		MinRelevance: 0.1,
@@ -746,7 +585,7 @@ func (gd *GoogleDocking) SearchWithFilters(query string, filters map[string]inte
 }
 
 // GetSearchSuggestions returns search suggestions based on the query
-func (gd *GoogleDocking) GetSearchSuggestions(query string) ([]string, error) {
+func (gd *GoogleDorking) GetSearchSuggestions(query string) ([]string, error) {
 	if query == "" {
 		return []string{}, nil
 	}
@@ -765,7 +604,7 @@ func (gd *GoogleDocking) GetSearchSuggestions(query string) ([]string, error) {
 }
 
 // GetSearchStatistics returns statistics about the search results
-func (gd *GoogleDocking) GetSearchStatistics(results []domain.GoogleDockingResult) map[string]interface{} {
+func (gd *GoogleDorking) GetSearchStatistics(results []domain.GoogleDorkingResult) map[string]interface{} {
 	if len(results) == 0 {
 		return map[string]interface{}{
 			"total_results":     0,
@@ -800,13 +639,13 @@ func (gd *GoogleDocking) GetSearchStatistics(results []domain.GoogleDockingResul
 // Fluent API examples and helper functions
 
 // QuickSearch provides a simple one-liner search
-func QuickSearch(query string) ([]domain.GoogleDockingResult, error) {
-	return NewGoogleDockingBuilder().Query(query).Build()
+func QuickSearch(query string) ([]domain.GoogleDorkingResult, error) {
+	return NewGoogleDorkingBuilder().Query(query).Build()
 }
 
 // AdvancedSearch provides a more complex search with multiple parameters
-func AdvancedSearch(query string, maxResults int, minRelevance float64) ([]domain.GoogleDockingResult, error) {
-	return NewGoogleDockingBuilder().
+func AdvancedSearch(query string, maxResults int, minRelevance float64) ([]domain.GoogleDorkingResult, error) {
+	return NewGoogleDorkingBuilder().
 		Query(query).
 		MaxResults(maxResults).
 		MinRelevance(minRelevance).
@@ -814,24 +653,24 @@ func AdvancedSearch(query string, maxResults int, minRelevance float64) ([]domai
 }
 
 // ExactSearch performs an exact match search
-func ExactSearch(query string) ([]domain.GoogleDockingResult, error) {
-	return NewGoogleDockingBuilder().
+func ExactSearch(query string) ([]domain.GoogleDorkingResult, error) {
+	return NewGoogleDorkingBuilder().
 		Query(query).
 		ExactMatch(true).
 		Build()
 }
 
 // CaseSensitiveSearch performs a case-sensitive search
-func CaseSensitiveSearch(query string) ([]domain.GoogleDockingResult, error) {
-	return NewGoogleDockingBuilder().
+func CaseSensitiveSearch(query string) ([]domain.GoogleDorkingResult, error) {
+	return NewGoogleDorkingBuilder().
 		Query(query).
 		CaseSensitive(true).
 		Build()
 }
 
 // FilteredSearch performs a search with keyword filtering
-func FilteredSearch(query string, includeKeywords, excludeKeywords []string) ([]domain.GoogleDockingResult, error) {
-	return NewGoogleDockingBuilder().
+func FilteredSearch(query string, includeKeywords, excludeKeywords []string) ([]domain.GoogleDorkingResult, error) {
+	return NewGoogleDorkingBuilder().
 		Query(query).
 		IncludeKeywords(includeKeywords...).
 		ExcludeKeywords(excludeKeywords...).

@@ -1,6 +1,7 @@
-import { type DomainSearchResult, type Entity, type ScjCase, type PgrNews, type GoogleDockingResult, type DomainType, DOMAIN_TYPE_MAP} from '../types';
+import { type DomainSearchResult, type Entity, type ScjCase, type PgrNews, type GoogleDockingResult, type DomainType, DOMAIN_TYPE_MAP, type Register  } from '../types';
 import OnapiRow from './OnapiRow';
 import ScjRow from './ScjRow';
+import DgiiRow from './DgiiRow';
 import PgrRow from './PgrRow';
 import DockingRow from './DockingRow';
 import { getHeaders } from '../helpers/common';
@@ -10,17 +11,22 @@ interface DomainOutputProps {
 }
 
 export default function DomainOutput({ result }: DomainOutputProps) {
+  console.log('result', result);
   if (!result.output || !Array.isArray(result.output) || result.output.length === 0) {
+    console.log('result.output', result.output);
     return null;
   }
 
   // Normalize domain_type to handle both uppercase constants and lowercase strings
   const domainType = result.name.toLowerCase();
 
-  const renderRow = (item: Entity | ScjCase | PgrNews | GoogleDockingResult, index: number) => {
+  const renderRow = (item: Entity | ScjCase | PgrNews | GoogleDockingResult | Register, index: number) => {
+    console.log('item', item);
     switch (domainType) {
       case DOMAIN_TYPE_MAP.ONAPI:
         return <OnapiRow key={(item as Entity).id || index} entity={item as Entity} index={index} />;
+      case DOMAIN_TYPE_MAP.DGII:
+        return <DgiiRow key={(item as Register).id || index} register={item as Register} index={index} />;
       case DOMAIN_TYPE_MAP.SCJ:
         return <ScjRow key={(item as ScjCase).id || index} scjCase={item as ScjCase} index={index} />;
       case DOMAIN_TYPE_MAP.PGR:
@@ -34,6 +40,7 @@ export default function DomainOutput({ result }: DomainOutputProps) {
 
   const headers = getHeaders(domainType as DomainType);
   if (headers.length === 0) {
+    console.log('headers', headers);
     return null;
   }
 

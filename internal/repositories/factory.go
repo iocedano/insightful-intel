@@ -29,7 +29,7 @@ func (h *DomainRepositoryHandler) GetDomainTypeRepo(domainType domain.DomainType
 		return h.GetDgiiRepository()
 	case domain.DomainTypePGR:
 		return h.GetPgrRepository()
-	case domain.DomainTypeGoogleDocking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
+	case domain.DomainTypeGoogleDorking, domain.DomainTypeSocialMedia, domain.DomainTypeFileType, domain.DomainTypeXSocialMedia:
 		return h.GetDockingRepository()
 	}
 	return nil

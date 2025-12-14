@@ -20,13 +20,6 @@ func NewScjDomain() Scj {
 	}
 }
 
-type ScjSearchResponse struct {
-	Draw            string    `json:"draw"`
-	RecordsFiltered int       `json:"recordsFiltered"`
-	RecordsTotal    int       `json:"recordsTotal"`
-	Data            []ScjCase `json:"data"`
-}
-
 type ScjCase struct {
 	ID                   ID        `json:"id"`
 	DomainSearchResultID ID        `json:"domain_search_result_id"`

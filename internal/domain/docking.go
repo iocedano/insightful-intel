@@ -18,6 +18,10 @@ var FRAUD_KEYWORDS = []string{
 	"acusa",
 	"acusacion",
 	"acusado",
+	"fraude inmobiliaria",
+	"fraude inmobiliaria en republica dominicana",
+	"terrenos irregulares",
+	"incumplimiento de contrato",
 }
 
 var SOCIAL_MEDIA_SITES_KEYWORDS = []string{
@@ -60,23 +64,23 @@ var FILE_TYPE_KEYWORDS = []string{
 	"pptx",
 }
 
-// GoogleDocking represents a Google Docking string search connector
-type GoogleDocking struct {
+// GoogleDorking represents a Google Docking string search connector
+type GoogleDorking struct {
 	Stuff    custom.Client
 	BasePath string
 	PathMap  custom.CustomPathMap
 }
 
-// NewGoogleDockingDomain creates a new Google Docking domain instance
-func NewGoogleDockingDomain() GoogleDocking {
-	return GoogleDocking{
+// NewGoogleDorkingDomain creates a new Google Docking domain instance
+func NewGoogleDorkingDomain() GoogleDorking {
+	return GoogleDorking{
 		BasePath: "https://html.duckduckgo.com/html/",
 		Stuff:    *custom.NewClient(),
 	}
 }
 
-// GoogleDockingResult represents a search result from Google Docking
-type GoogleDockingResult struct {
+// GoogleDorkingResult represents a search result from Google Docking
+type GoogleDorkingResult struct {
 	ID                   ID        `json:"id"`
 	DomainSearchResultID ID        `json:"domainSearchResultId"`
 	SearchParameter      string    `json:"searchParameter" omitempty`
@@ -90,8 +94,8 @@ type GoogleDockingResult struct {
 	UpdatedAt            time.Time `json:"updatedAt" omitempty`
 }
 
-// GoogleDockingSearchParams holds parameters for Google Docking search
-type GoogleDockingSearchParams struct {
+// GoogleDorkingSearchParams holds parameters for Google Docking search
+type GoogleDorkingSearchParams struct {
 	Query            string   `json:"query"`
 	MaxResults       int      `json:"max_results"`
 	MinRelevance     float64  `json:"min_relevance"`

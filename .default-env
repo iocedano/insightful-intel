@@ -1,0 +1,15 @@
+PORT=8080
+APP_ENV=local
+BLUEPRINT_DB_HOST=mysql_bp
+BLUEPRINT_DB_PORT=3306
+BLUEPRINT_DB_DATABASE=blueprint
+BLUEPRINT_DB_USERNAME=melkey
+BLUEPRINT_DB_PASSWORD=password1234
+BLUEPRINT_DB_ROOT_PASSWORD=password4321
+GOOGLE_API_KEY=
+GOOGLE_CX_KEY=
+DGII_API_URL=https://dgii.gov.do/app/WebApps/ConsultasWeb2/ConsultasWeb/consultas/rnc.aspx
+ONAPI_API_URL=https://www.onapi.gob.do/busqapi/signos/
+PGR_URL=https://pgr.gob.do/
+SCJ_API_URL=https://consultasentenciascj.poderjudicial.gob.do/Home/GetExpedientes
+

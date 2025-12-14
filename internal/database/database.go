@@ -95,9 +95,9 @@ func (s *service) Health() map[string]string {
 	stats["max_lifetime_closed"] = strconv.FormatInt(dbStats.MaxLifetimeClosed, 10)
 
 	// Evaluate stats to provide a health message
-	if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
-		stats["message"] = "The database is experiencing heavy load."
-	}
+	// if dbStats.OpenConnections > 40 { // Assuming 50 is the max for this example
+	// 	stats["message"] = "The database is experiencing heavy load."
+	// }
 	if dbStats.WaitCount > 1000 {
 		stats["message"] = "The database has a high number of wait events, indicating potential bottlenecks."
 	}

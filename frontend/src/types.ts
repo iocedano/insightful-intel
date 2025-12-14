@@ -3,7 +3,8 @@ export const DOMAIN_TYPE_MAP = {
   SCJ: "scj",
   DGII: "dgii",
   PGR: "pgr",
-  GOOGLE_DOCKING: "docking",
+  GOOGLE_DOCKING: "google_docking",
+  DOCKING: "docking",
   SOCIAL_MEDIA: "social_media",
   X_SOCIAL_MEDIA: "x_social_media",
   FILE_TYPE: "file_type",
@@ -25,7 +26,7 @@ export interface DomainSearchResult {
 
 export interface DynamicPipelineStep {
   id?: string;
-  domain_type: string;
+  domain_type: DomainType;
   search_parameter: string;
   category?: string;
   keywords?: string[];
@@ -37,8 +38,10 @@ export interface DynamicPipelineStep {
 }
 
 export interface DynamicPipelineResult {
-  id?: string;
+  id: string;
   steps: DynamicPipelineStep[];
+  created_at: Date;
+  updated_at: Date;
   total_steps: number;
   successful_steps: number;
   failed_steps: number;
@@ -48,6 +51,8 @@ export interface DynamicPipelineResult {
     max_concurrent_steps: number;
     delay_between_steps: number;
     skip_duplicates: boolean;
+    available_domains: DomainType[];
+    query: string;
   };
 }
 
@@ -128,5 +133,3 @@ export interface GoogleDockingResult {
   search_rank: number;
   [key: string]: any;
 }
-
-

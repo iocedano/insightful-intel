@@ -1,5 +1,20 @@
 -- Database schema for Insightful Intel repositories
 -- This file contains all the necessary table definitions for the repository layer
+-- grant all privileges on insightful_intel.* to root@'%' with grant option;
+-- grant all privileges on insightful_intel.* to root@'localhost' with grant option;
+-- grant all privileges on insightful_intel.* to root@'127.0.0.1' with grant option;
+-- grant all privileges on insightful_intel.* to root@'::1' with grant option;
+
+
+-- GRANT ALL PRIVILEGES ON insightful_intel.* TO 'melkey'@'%';
+-- GRANT ALL PRIVILEGES ON insightful_intel.* TO 'melkey'@'::1';
+-- GRANT ALL PRIVILEGES ON insightful_intel.* TO 'melkey'@'localhost';
+-- GRANT ALL PRIVILEGES ON insightful_intel.* TO 'melkey'@'127.0.0.1';
+-- GRANT ALL PRIVILEGES ON insightful_intel.* TO 'melkey'@'172.22.0.3';
+-- FLUSH PRIVILEGES;
+
+
+-- SET GLOBAL sort_buffer_size = 256000000;
 
 -- Dynamic pipeline results table
 CREATE TABLE IF NOT EXISTS  dynamic_pipeline_results (

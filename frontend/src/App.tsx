@@ -1,7 +1,8 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Navigation from './components/Navigation';
-import Pipeline from './components/Pipeline';
-import Search from './components/Search';
+import Dashboard from './pages/Dashboard';
+import Pipeline from './pages/Pipeline';
+import Search from './pages/Search';
 import DomainList from './components/DomainList';
 
 function App() {
@@ -10,7 +11,8 @@ function App() {
       <Navigation />
       <main className="py-8">
         <Routes>
-          <Route path="/" element={<Navigate to="/pipeline" replace />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/search" element={<Search />} />
           <Route path="/onapi" element={<DomainList domain="onapi" title="ONAPI Entities" />} />

@@ -46,7 +46,7 @@ The repository layer follows the Repository pattern and provides:
   - Minimal structure for news articles
 
 ### Google Docking Repository (`docking_repository.go`)
-- **Entity Type**: `domain.GoogleDockingResult`
+- **Entity Type**: `domain.GoogleDorkingResult`
 - **Database Table**: `google_docking_results`
 - **Key Features**:
   - Stores Google search results with relevance scoring

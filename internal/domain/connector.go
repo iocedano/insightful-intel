@@ -76,7 +76,7 @@ const (
 	DomainTypeSCJ           DomainType = "SCJ"
 	DomainTypeDGII          DomainType = "DGII"
 	DomainTypePGR           DomainType = "PGR"
-	DomainTypeGoogleDocking DomainType = "GOOGLE_DOCKING"
+	DomainTypeGoogleDorking DomainType = "GOOGLE_DOCKING"
 	DomainTypeSocialMedia   DomainType = "SOCIAL_MEDIA"
 	DomainTypeXSocialMedia  DomainType = "X_SOCIAL_MEDIA"
 	DomainTypeFileType      DomainType = "FILE_TYPE"
@@ -89,7 +89,7 @@ func AllDomainTypes() []DomainType {
 		DomainTypeSCJ,
 		DomainTypeDGII,
 		DomainTypePGR,
-		DomainTypeGoogleDocking,
+		DomainTypeGoogleDorking,
 		DomainTypeSocialMedia,
 		DomainTypeXSocialMedia,
 		DomainTypeFileType,
@@ -111,7 +111,7 @@ var StringToDomainType = map[string]DomainType{
 	"scj":            DomainTypeSCJ,
 	"dgii":           DomainTypeDGII,
 	"pgr":            DomainTypePGR,
-	"docking":        DomainTypeGoogleDocking,
+	"docking":        DomainTypeGoogleDorking,
 	"social_media":   DomainTypeSocialMedia,
 	"x_social_media": DomainTypeXSocialMedia,
 	"file_type":      DomainTypeFileType,
@@ -123,7 +123,7 @@ var DomainTypeToString = map[DomainType]string{
 	DomainTypeSCJ:           "scj",
 	DomainTypeDGII:          "dgii",
 	DomainTypePGR:           "pgr",
-	DomainTypeGoogleDocking: "docking",
+	DomainTypeGoogleDorking: "docking",
 	DomainTypeSocialMedia:   "social_media",
 	DomainTypeXSocialMedia:  "x_social_media",
 	DomainTypeFileType:      "file_type",

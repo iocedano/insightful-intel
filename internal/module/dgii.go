@@ -3,8 +3,8 @@ package module
 import (
 	"bytes"
 	"fmt"
-	"insightful-intel/internal/domain"
 	"insightful-intel/internal/custom"
+	"insightful-intel/internal/domain"
 	"io"
 	"net/url"
 	"strings"
@@ -64,21 +64,25 @@ func (dgi *Dgii) GetDataByCategory(data domain.Register, category domain.Keyword
 			result = append(result, data.NombreComercial)
 		}
 
-		if data.RazonSocial != "" {
-			result = append(result, data.RazonSocial)
-		}
-
 		result = append(result, data.NombreComercial, data.RazonSocial)
 	case domain.KeywordCategoryContributorID:
 		result = append(result, data.RNC)
 	}
 
-	return result
+	// Filter out empty strings from result
+	nonEmpty := make([]string, 0, len(result))
+	for _, item := range result {
+		if item != "" {
+			nonEmpty = append(nonEmpty, item)
+		}
+	}
+	return nonEmpty
 }
 
 func (dgi *Dgii) GetSearchableKeywordCategories() []domain.KeywordCategory {
 	return []domain.KeywordCategory{
 		domain.KeywordCategoryCompanyName,
+		domain.KeywordCategoryPersonName,
 	}
 }
 
@@ -157,9 +161,9 @@ func (dgi *Dgii) GetRegister(query string) ([]domain.Register, error) {
 	}
 
 	resp, err := dgi.Stuff.Post(dgi.BaseParh, formData.Encode(), map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded",
-			"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-		},
+		"Content-Type": "application/x-www-form-urlencoded",
+		"User-Agent":   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+	},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make post request: %w", err)

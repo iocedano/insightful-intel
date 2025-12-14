@@ -130,7 +130,7 @@ func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
 		"texto":    query,
 		"tipo":     "",
 		"clases":   "",
-		"pageSize": "1000",
+		"pageSize": "50",
 		"pageIdx":  "1",
 	}, map[string]string{
 		"Content-Type":    "application/json",
@@ -139,11 +139,11 @@ func (o *Onapi) SearchComercialName(query string) ([]domain.Entity, error) {
 		"Accept-Language": "en-US,en;q=0.9",
 		"Accept-Encoding": "gzip, deflate, br",
 		"Connection":      "gzip, deflate, br, zstd",
-		"Referer":         "https://www.onapi.gob.do/busquedas2021/signos/buscar",
-		"Sec-Fetch-Dest":  "empty",
-		"Sec-Fetch-Mode":  "cors",
-		"Sec-Fetch-Site":  "same-origin",
-		"Host":            "www.onapi.gob.do",
+		// "Referer":         "https://www.onapi.gob.do/busquedas2021/signos/buscar",
+		"Sec-Fetch-Dest": "empty",
+		"Sec-Fetch-Mode": "cors",
+		"Sec-Fetch-Site": "same-origin",
+		"Host":           "www.onapi.gob.do",
 	})
 
 	if err != nil {

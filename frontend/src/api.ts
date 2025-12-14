@@ -6,6 +6,7 @@ import type {
   PgrNews,
   GoogleDockingResult,
   PipelineResponse,
+  DynamicPipelineResult,
 } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -68,6 +69,10 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 const API_FUNCTIONS = Object.freeze({
   // Pipeline endpoints
+
+  getPipelineByID: (id: string) =>
+    fetchAPI<{ success: boolean; data: DynamicPipelineResult }>(`/api/pipeline?id=${id}`),
+
   getPipelines: (offset = 0, limit = 10) =>
     fetchAPI<{ success: boolean; data: any[]; count: number }>(
       `/api/pipeline?offset=${offset}&limit=${limit}`
