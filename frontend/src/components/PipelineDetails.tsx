@@ -108,7 +108,7 @@ function PipelineDetails(props: PipelineDetailsProps) {
         step.search_parameter?.toLowerCase().includes(query) ||
         step.domain_type?.toLowerCase().includes(query) ||
         step.keywords?.some((kw) => kw.toLowerCase().includes(query)) ||
-        step.error?.toLowerCase().includes(query)
+        !!step.error
       );
     });
   }, [steps, searchQuery]);
@@ -171,7 +171,7 @@ function PipelineDetails(props: PipelineDetailsProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-6">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
               <p className="text-xs md:text-sm text-blue-700 font-medium mb-1">Total Steps</p>
-              <p className="text-xl md:text-2xl font-bold text-blue-900">{pipeline.total_steps}</p>
+              <p className="text-xl md:text-2xl font-bold text-blue-900">{pipeline?.total_steps || pipeline?.steps?.length}</p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
               <p className="text-xs md:text-sm text-green-700 font-medium mb-1">Successful</p>
@@ -179,8 +179,8 @@ function PipelineDetails(props: PipelineDetailsProps) {
               {pipeline?.successful_steps || pipeline?.steps?.filter(s => s.success).length}
               </p>
               <p className="text-xs text-green-600 mt-1">
-                {pipeline.total_steps > 0
-                  ? Math.round((pipeline?.successful_steps || pipeline?.steps?.filter(s => s.success).length) / (pipeline?.total_steps || pipeline?.steps?.length)) * 100
+                {pipeline?.successful_steps && pipeline?.total_steps > 0
+                  ? Math.round((pipeline?.successful_steps / pipeline?.total_steps) * 100)
                   : 0}%
               </p>
             </div>
@@ -191,7 +191,7 @@ function PipelineDetails(props: PipelineDetailsProps) {
               </p>
               <p className="text-xs text-red-600 mt-1">
                 {pipeline?.failed_steps && pipeline?.total_steps > 0
-                  ? Math.round((pipeline?.failed_steps || pipeline?.steps?.filter(s => !s.success).length) / (pipeline?.total_steps || pipeline?.steps?.length)) * 100
+                  ? Math.round((pipeline?.failed_steps / pipeline?.total_steps) * 100)
                   : 0}%
               </p>
             </div>

@@ -66,7 +66,7 @@ export default function CardStep({ step, showDetails = true }: CardStepProps) {
 
         {step.error && (
           <div className="p-2 bg-red-100 border border-red-300 rounded text-sm text-red-800">
-            <span className="font-medium">Error:</span> {step.error}
+            <span className="font-medium">Error</span>
           </div>
         )}
 

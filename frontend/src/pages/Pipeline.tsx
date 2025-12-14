@@ -19,9 +19,6 @@ export default function Pipeline() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-
     // Clear any existing polling interval
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -33,6 +30,7 @@ export default function Pipeline() {
     api.executeDynamicPipeline(query, depth, skipDuplicates, false).then((response) => {
       setPipelineId(response.execution_id);
       setLoading(true);
+      setError(null);
     }).catch((err) => {
       console.error('Error executing pipeline:', err);  
       setError('Failed to execute pipeline');
@@ -61,10 +59,10 @@ export default function Pipeline() {
           setError('Failed to fetch pipeline result');
         }
       }).catch((err) => {
-        console.error('Error fetching pipeline result:', err);
-      }).finally(() => {
         setLoading(false);
-      });
+        setError('Failed to fetch pipeline result');
+        console.error('Error fetching pipeline result:', err);
+      })
     };
 
     // Fetch immediately
@@ -88,6 +86,7 @@ export default function Pipeline() {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
         setLoading(false);
+        setError(null);
       }
     }
   }, [pipelineResult?.total_steps || 0]);
