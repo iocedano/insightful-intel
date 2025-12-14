@@ -1,271 +1,264 @@
 # Insightful Intel
 
-An intelligent data aggregation and investigation platform that performs comprehensive searches across multiple Dominican Republic government and public data sources. The system enables automated cross-domain intelligence gathering by dynamically creating search pipelines that extract keywords from one domain and use them to search other related domains.
+Una plataforma inteligente de agregación e investigación de datos que realiza búsquedas exhaustivas en múltiples fuentes de datos gubernamentales y públicas de la República Dominicana. El sistema permite la recopilación automatizada de inteligencia entre dominios mediante la creación dinámica de pipelines de búsqueda que extraen palabras clave de un dominio y las utilizan para buscar en otros dominios relacionados.
 
-## 🎯 Overview
+## 🎯 Resumen
 
-Insightful Intel automates the process of gathering intelligence from multiple public data sources, including:
+Insightful Intel automatiza el proceso de recopilación de inteligencia desde múltiples fuentes de datos públicas, incluyendo:
 
-- **ONAPI** (Oficina Nacional de la Propiedad Industrial) - Trademark and patent registrations
-- **SCJ** (Suprema Corte de Justicia) - Supreme Court case records
-- **DGII** (Dirección General de Impuestos Internos) - Tax authority registrations
-- **PGR** (Procuraduría General de la República) - Attorney General's Office news
-- **Google Docking** - Web search results with relevance scoring
-- **Social Media** - Social media platform searches
-- **File Type Searches** - Document and file searches
+- **ONAPI** (Oficina Nacional de la Propiedad Industrial) - Registros de marcas y patentes
+- **SCJ** (Suprema Corte de Justicia) - Registros de casos de la Corte Suprema
+- **DGII** (Dirección General de Impuestos Internos) - Registros de la autoridad fiscal
+- **PGR** (Procuraduría General de la República) - Noticias de la Procuraduría General
+- **Google Docking** - Resultados de búsqueda web con puntuación de relevancia
+- **Redes Sociales** - Búsquedas en plataformas de redes sociales
+- **Búsquedas por Tipo de Archivo** - Búsquedas de documentos y archivos
 
-## ✨ Key Features
+## ✨ Características Principales
 
-- **Dynamic Pipeline System**: Automatically generates search steps based on extracted keywords
-- **Multi-Domain Search**: Unified interface for searching across 7+ data sources
-- **Keyword Extraction & Categorization**: Automatic extraction and categorization of relevant keywords
-- **Real-Time Streaming**: Server-Sent Events (SSE) for live pipeline updates
-- **Persistent Storage**: All search results and pipeline executions stored in MySQL
-- **RESTful API**: Clean REST endpoints for all operations
-- **CLI Tool**: Command-line interface for automated/scripted usage
-- **Domain-Driven Design**: Well-structured architecture following DDD principles
+- **Sistema de Pipeline Dinámico**: Genera automáticamente pasos de búsqueda basados en palabras clave extraídas
+- **Búsqueda Multi-Dominio**: Interfaz unificada para buscar en 7+ fuentes de datos
+- **Extracción y Categorización de Palabras Clave**: Extracción y categorización automática de palabras clave relevantes
+- **Transmisión en Tiempo Real**: Server-Sent Events (SSE) para actualizaciones en vivo del pipeline
+- **Almacenamiento Persistente**: Todos los resultados de búsqueda y ejecuciones de pipeline almacenados en MySQL
+- **API RESTful**: Endpoints REST limpios para todas las operaciones
+- **Herramienta CLI**: Interfaz de línea de comandos para uso automatizado/scripted
+- **Diseño Dirigido por Dominio**: Arquitectura bien estructurada siguiendo principios DDD
 
-## 🏗️ Architecture
+## 🏗️ Arquitectura
 
-The project follows a **Domain-Driven Design (DDD)** architecture with clear separation of concerns:
+El proyecto sigue una arquitectura de **Diseño Dirigido por Dominio (DDD)** con clara separación de responsabilidades:
 
 ```
 ┌─────────────────────────────────────────┐
-│         Presentation Layer               │
-│  (HTTP Handlers, React Frontend)        │
+│      Capa de Presentación               │
+│  (Manejadores HTTP, Frontend React)    │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│      Application Layer                  │
-│  (Interactors, Use Cases)              │
+│      Capa de Aplicación                  │
+│  (Interactores, Casos de Uso)          │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│         Domain Layer                     │
-│  (Entities, Value Objects, Services)   │
+│         Capa de Dominio                  │
+│  (Entidades, Objetos de Valor, Servicios)│
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│      Infrastructure Layer               │
-│  (Repositories, Database, HTTP)        │
+│      Capa de Infraestructura            │
+│  (Repositorios, Base de Datos, HTTP)   │
 └─────────────────────────────────────────┘
 ```
 
-## 🛠️ Technologies
+## 🛠️ Tecnologías
 
 ### Backend
-- **Go 1.24.2** - Core backend language
-- **MySQL** - Relational database
-- **Colly** - Web scraping framework
-- **Cobra** - CLI framework
+- **Go 1.24.2** - Lenguaje principal del backend
+- **MySQL** - Base de datos relacional
+- **Colly** - Framework de web scraping
+- **Cobra** - Framework CLI
 
 ### Frontend
-- **React 19** - UI framework
-- **TypeScript** - Type-safe development
-- **Vite** - Build tool and dev server
-- **Tailwind CSS** - Utility-first CSS framework
+- **React 19** - Framework de UI
+- **TypeScript** - Desarrollo con tipos seguros
+- **Vite** - Herramienta de construcción y servidor de desarrollo
+- **Tailwind CSS** - Framework CSS utility-first
 
-### Infrastructure
-- **Docker & Docker Compose** - Containerization
-- **Make** - Build automation
+### Infraestructura
+- **Docker & Docker Compose** - Containerización
+- **Make** - Automatización de construcción
 
-## 🚀 Getting Started
+## 🚀 Inicio Rápido
 
-### Prerequisites
+### Prerrequisitos
 
-- Go 1.24.2 or later
-- Node.js 18+ and npm
-- Docker and Docker Compose
-- MySQL (or use Docker)
+- Go 1.24.2 o posterior
+- Node.js 18+ y npm
+- Docker y Docker Compose
+- MySQL (o usar Docker)
 
-### Installation
+### Instalación
 
-1. **Clone the repository**
+1. **Clonar el repositorio**
    ```bash
    git clone <repository-url>
    cd insightful-intel
    ```
 
-2. **Start the database**
+2. **Iniciar la base de datos**
    ```bash
    make docker-run
    ```
 
-3. **Install frontend dependencies**
+3. **Instalar dependencias del frontend**
    ```bash
    cd frontend
    npm install
    cd ..
    ```
 
-4. **Set up environment variables**
-   Create a `.env` file in the root directory:
+4. **Configurar variables de entorno**
+   Crear un archivo `.env` en el directorio raíz:
    ```env
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_USER=root
-   DB_PASSWORD=password
-   DB_NAME=insightful_intel
+   BLUEPRINT_DB_HOST=localhost
+   BLUEPRINT_DB_PORT=3306
+   BLUEPRINT_DB_USER=root
+   BLUEPRINT_DB_PASSWORD=password
+   BLUEPRINT_DB_NAME=insightful_intel
    ```
 
-5. **Run the application**
+5. **Ejecutar la aplicación**
    ```bash
    make run
    ```
-   This will start both the backend API server and frontend development server.
+   Esto iniciará tanto el servidor API backend como el servidor de desarrollo del frontend.
 
-### Development
+### Desarrollo
 
-**Start backend with live reload:**
+**Iniciar backend con recarga automática:**
 ```bash
 make watch
 ```
 
-**Run tests:**
+**Ejecutar pruebas:**
 ```bash
-make test          # Unit tests
-make itest         # Integration tests
+make test          # Pruebas unitarias
+make itest         # Pruebas de integración
 ```
 
-**Build the application:**
+**Construir la aplicación:**
 ```bash
-make build         # Build API server
-make build-cli     # Build CLI tool
+make build         # Construir servidor API
+make build-cli     # Construir herramienta CLI
 ```
 
-## 📚 Usage
+## 📚 Uso
 
-### API Endpoints
+### Endpoints de API
 
-#### Search Operations
-- `GET /search?q={query}&domain={domain}` - Search a specific domain
-- `GET /search?q={query}` - Search all default domains
-- `GET /dynamic?q={query}&depth={depth}&skip_duplicates={bool}&stream={bool}` - Execute dynamic pipeline
+#### Operaciones de Búsqueda
+- `GET /search?q={query}&domain={domain}` - Buscar un dominio específico
+- `GET /search?q={query}` - Buscar en todos los dominios por defecto
+- `GET /dynamic?q={query}&depth={depth}&skip_duplicates={bool}&stream={bool}` - Ejecutar pipeline dinámico
 
-#### Domain-Specific Data
-- `GET /api/onapi` - ONAPI entities
-- `GET /api/scj` - SCJ cases
-- `GET /api/dgii` - DGII registers
-- `GET /api/pgr` - PGR news
-- `GET /api/docking` - Google Docking results
+#### Datos Específicos por Dominio
+- `GET /api/onapi` - Entidades ONAPI
+- `GET /api/scj` - Casos SCJ
+- `GET /api/dgii` - Registros DGII
+- `GET /api/pgr` - Noticias PGR
+- `GET /api/docking` - Resultados de Google Docking
 
-#### Pipeline Operations
-- `GET /api/pipeline` - List all pipelines
-- `GET /api/pipeline/steps?pipeline_id={id}` - Get pipeline steps
-- `POST /api/pipeline/save` - Save pipeline execution
+#### Operaciones de Pipeline
+- `GET /api/pipeline` - Listar todos los pipelines
+- `GET /api/pipeline/steps?pipeline_id={id}` - Obtener pasos del pipeline
+- `POST /api/pipeline/save` - Guardar ejecución del pipeline
 
-### CLI Usage
+### Uso de CLI
 
 ```bash
-# Build CLI
+# Construir CLI
 make build-cli
 
-# Run dynamic pipeline
+# Ejecutar pipeline dinámico
 ./cli run "Novasco" --max-depth 5 --skip-duplicates
 
-# Or use go run
+# O usar go run
 go run cmd/cli/main.go run "Novasco" --max-depth 5
 ```
 
-### Example: Dynamic Pipeline
+### Ejemplo: Pipeline Dinámico
 
-Execute a dynamic pipeline that automatically explores related entities:
+Ejecutar un pipeline dinámico que explora automáticamente entidades relacionadas:
 
 ```bash
 curl "http://localhost:8080/dynamic?q=Novasco&depth=5&skip_duplicates=true&stream=true"
 ```
 
-The pipeline will:
-1. Start with initial query "Novasco"
-2. Search across all available domains
-3. Extract keywords from results
-4. Create new searches using extracted keywords
-5. Continue up to the specified depth
-6. Stream results in real-time
+El pipeline:
+1. Comienza con la consulta inicial "Novasco"
+2. Busca en todos los dominios disponibles
+3. Extrae palabras clave de los resultados
+4. Crea nuevas búsquedas usando las palabras clave extraídas
+5. Continúa hasta la profundidad especificada
+6. Transmite resultados en tiempo real
 
-## 📁 Project Structure
+## 📁 Estructura del Proyecto
 
 ```
 insightful-intel/
-├── cmd/                    # Application entry points
-│   ├── api/               # HTTP API server
-│   └── cli/               # Command-line interface
-├── internal/              # Private application code
-│   ├── domain/           # Domain models and business logic
-│   ├── repositories/     # Data access layer
-│   ├── interactor/       # Application use cases
-│   ├── module/           # Domain services
-│   ├── server/           # HTTP handlers and routes
-│   ├── database/         # Database connection and migrations
-│   └── infra/            # Infrastructure concerns
-├── frontend/             # React frontend application
+├── cmd/                    # Puntos de entrada de la aplicación
+│   ├── api/               # Servidor HTTP API
+│   └── cli/               # Interfaz de línea de comandos
+├── internal/              # Código privado de la aplicación
+│   ├── domain/           # Modelos de dominio y lógica de negocio
+│   ├── repositories/     # Capa de acceso a datos
+│   ├── interactor/       # Casos de uso de la aplicación
+│   ├── module/           # Servicios de dominio
+│   ├── server/           # Manejadores HTTP y rutas
+│   ├── database/         # Conexión a base de datos y migraciones
+│   └── infra/            # Preocupaciones de infraestructura
+├── frontend/             # Aplicación frontend React
 │   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   └── api.ts       # API client
-├── config/              # Configuration management
-├── doc/                 # Documentation
-└── vendor/              # Go dependencies
+│   │   ├── components/  # Componentes React
+│   │   ├── pages/       # Componentes de página
+│   │   └── api.ts       # Cliente API
+├── config/              # Gestión de configuración
+├── docs/                # Documentación
+└── vendor/              # Dependencias Go
 ```
 
-## 📖 Documentation
+## 📖 Documentación
 
-- **[Complete Project Documentation](PROJECT_DOCUMENTATION.md)** - Comprehensive guide covering architecture, DDD implementation, use cases, and more
-- **[Implementing a New Domain Type](docs/IMPLEMENTING_NEW_DOMAIN.md)** - Step-by-step guide to add a new domain type to the system
-- **[Project Improvements Guide](docs/PROJECT_IMPROVEMENTS.md)** - Recommendations for migrations, database structure, testing, and more
-- **[Dynamic Pipeline Guide](DYNAMIC_PIPELINE_GUIDE.md)** - Detailed explanation of the dynamic pipeline system
-- **[Google Docking Builder](GOOGLE_DOCKING_BUILDER.md)** - Google Docking search system documentation
-- **[Domain Search Usage](DOMAIN_SEARCH_USAGE.md)** - How to use domain search functions
-- **[CLI Usage](CLI_USAGE.md)** - Command-line interface documentation
+- **[Documentación Completa del Proyecto](docs/PROJECT_DOCUMENTATION.md)** - Guía completa que cubre arquitectura, implementación DDD, casos de uso y más
+- **[Implementando un Nuevo Tipo de Dominio](docs/IMPLEMENTING_NEW_DOMAIN_ES.md)** - Guía paso a paso para agregar un nuevo tipo de dominio al sistema
+- **[Guía de Mejoras del Proyecto](docs/PROJECT_IMPROVEMENTS.md)** - Recomendaciones para migraciones, estructura de base de datos, pruebas y más
+- **[Guía de Pipeline Dinámico](docs/DYNAMIC_PIPELINE_GUIDE_ES.md)** - Explicación detallada del sistema de pipeline dinámico
+- **[Uso de Búsqueda por Dominio](docs/DOMAIN_SEARCH_USAGE.md)** - Cómo usar las funciones de búsqueda por dominio
+- **[Uso de CLI](docs/CLI_USAGE_ES.md)** - Documentación de la interfaz de línea de comandos
 
-## 🧪 Testing
+## 🧪 Pruebas
 
 ```bash
-# Run all tests
+# Ejecutar todas las pruebas
 make test
 
-# Run integration tests (requires Docker)
+# Ejecutar pruebas de integración (requiere Docker)
 make itest
 
-# Run tests for specific package
+# Ejecutar pruebas para un paquete específico
 go test ./internal/domain/... -v
 ```
 
-## 🐳 Docker
-
+**Build the application:**
 ```bash
-# Start database container
+# Iniciar contenedor de base de datos
 make docker-run
 
-# Stop database container
+# Detener contenedor de base de datos
 make docker-down
 
-# Build API Docker image
+# Construir imagen Docker de API
 docker build -f API.Dockerfile -t insightful-intel-api .
 
-# Build CLI Docker image
+# Construir imagen Docker de CLI
 docker build -f CLI.Dockerfile -t insightful-intel-cli .
 ```
 
-## 🤝 Contributing
+## 🤝 Contribuir
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork el repositorio
+2. Crear una rama de funcionalidad (`git checkout -b feature/amazing-feature`)
+3. Commit tus cambios (`git commit -m 'Add some amazing feature'`)
+4. Push a la rama (`git push origin feature/amazing-feature`)
+5. Abrir un Pull Request
 
-## 📝 License
+## 📝 Licencia
 
-See [LICENSE](LICENSE) file for details.
+Ver archivo [LICENSE](LICENSE) para más detalles.
 
-## 🔗 Related Documentation
+## 🔗 Documentación Relacionada
 
-- [Sources](doc/Sources.md) - List of data sources and their purposes
-- [Repository Layer README](internal/repositories/README.md) - Repository layer documentation
-- [Pipeline Save Endpoint](PIPELINE_SAVE_ENDPOINT.md) - Pipeline save endpoint documentation
-- [Streaming Pipeline Guide](STREAMING_PIPELINE_GUIDE.md) - Real-time streaming implementation
+- [README de Capa de Repositorio](docs/REPO_ES.md) - Documentación de la capa de repositorio
 
 ---
-
-**Built with ❤️ using Domain-Driven Design principles**

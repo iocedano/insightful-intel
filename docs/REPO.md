@@ -149,14 +149,6 @@ All repositories return standard Go errors and handle:
 - Pagination is supported for all list operations
 - Database connections are managed through the database service layer
 
-## Testing
-
-Repository implementations should be tested with:
-- Unit tests for individual methods
-- Integration tests with actual database
-- Mock database for isolated testing
-- Performance tests for search operations
-
 ## Future Enhancements
 
 - Add caching layer for frequently accessed data
